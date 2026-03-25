@@ -607,25 +607,27 @@ class OncoGuardianPredictor:
         else:
             return 'HIGH'
 
-    def get_recommendations(self, patient_data: Dict, cancer_type: str = None) -> Dict:
+    def get_recommendations(self, patient_data: Dict, cancer_type: str = None, prediction: Dict = None) -> Dict:
         """
         Get personalized dietary recommendations.
         
         Args:
             patient_data (dict): Patient features
             cancer_type (str): Specific cancer type (if None, use prediction)
+            prediction (dict): Pre-computed prediction (optional, to avoid redundant calculations)
             
         Returns:
             dict: Recommendations with foods, supplements, lifestyle tips
         """
-        # Get prediction if cancer type not specified
+        # Get prediction if not provided
+        if prediction is None:
+            prediction = self.predict(patient_data)
+        
+        # Use provided cancer_type or get from prediction
         if cancer_type is None:
-            prediction = self.predict(patient_data)
             cancer_type = prediction['predicted_cancer_type']
-            confidence = prediction['confidence']
-        else:
-            prediction = self.predict(patient_data)
-            confidence = prediction['probabilities'].get(cancer_type, 0.5)
+        
+        confidence = prediction['probabilities'].get(cancer_type, 0.5)
 
         risk_level = self.get_risk_level(confidence)
 
@@ -644,8 +646,8 @@ class OncoGuardianPredictor:
             'cancer_type': cancer_type,
             'risk_level': risk_level,
             'confidence': float(confidence),
-            'recommended_foods': recommendations.get('recommended_foods', []),
-            'foods_to_avoid': recommendations.get('foods_to_avoid', []),
+            'foods': recommendations.get('foods', []),
+            'avoid': recommendations.get('avoid', []),
             'supplements': recommendations.get('supplements', []),
             'lifestyle_tips': recommendations.get('lifestyle', [])
         }
@@ -670,7 +672,8 @@ class OncoGuardianPredictor:
         prediction = self.predict(patient_data)
         cancer_type = prediction['predicted_cancer_type']
         
-        recommendations = self.get_recommendations(patient_data, cancer_type)
+        # Pass prediction to avoid redundant calculation
+        recommendations = self.get_recommendations(patient_data, cancer_type, prediction=prediction)
 
         return {
             'prediction': prediction,
@@ -796,8 +799,14 @@ def example_flutter_inputs():
             print(f"   {cancer:12} {prob:5.1%} {bar}")
         
         print(f"\n🍽️ Recommendations (Risk: {rec['risk_level']}):")
-        print(f"   Foods: {', '.join(rec['recommended_foods'][:2])}")
-        print(f"   Avoid: {', '.join(rec['foods_to_avoid'][:2])}")
+        if rec.get('foods'):
+            print(f"   Foods: {', '.join(rec['foods'][:2])}")
+        else:
+            print(f"   Foods: No specific recommendations")
+        if rec.get('avoid'):
+            print(f"   Avoid: {', '.join(rec['avoid'][:2])}")
+        else:
+            print(f"   Avoid: No specific recommendations")
 
 
 if __name__ == '__main__':

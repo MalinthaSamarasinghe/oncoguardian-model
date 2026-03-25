@@ -114,8 +114,10 @@ def load_and_explore_data(filepath):
         print(f"\n📋 First 5 rows:")
         print(df.head())
 
-        print(f"\n📋 Data Types:")
-        print(df.dtypes)
+        print(f"\n📋 Data Types by Feature:")
+        for col in df.columns:
+            dtype = df[col].dtype
+            print(f"   {col}: {dtype}")
 
         print(f"\n📋 Missing Values:")
         missing = df.isnull().sum()
@@ -332,6 +334,18 @@ def create_engineered_features(X):
     
     print(f"\n   🎉 Feature engineering complete! Added 10 new features")
     print(f"      Original features: {len(X)} (16 base) → Enhanced features: {len(X_eng)} (26 total)")
+    
+    base_features = list(X.columns[:16])
+    engineered_features = list(X_eng.columns[16:])
+    
+    print(f"\n   📋 Base Features (16):")
+    for i, feat in enumerate(base_features, 1):
+        print(f"      {i}. {feat}")
+    
+    print(f"\n   🔧 Engineered Features (10):")
+    for i, feat in enumerate(engineered_features, 1):
+        print(f"      {i}. {feat}")
+    
     print(f"\n   📋 Engineering methodology:")
     print(f"      • Age-adjusted factors (cumulative exposure model)")
     print(f"      • Metabolic & inflammatory markers")
@@ -393,10 +407,6 @@ def preprocess_data(df):
     
     X = df_numeric[feature_cols]
     y = df_numeric['Cancer_Type_Encoded']
-
-    print(f"\n   📊 Feature matrix shape: {X.shape}")
-    print(f"   📊 Features ({len(feature_cols)}): {', '.join(feature_cols[:5])}... +{len(feature_cols)-5} more")
-    print(f"   🎯 Target vector shape: {y.shape}")
 
     # Apply feature engineering
     X = create_engineered_features(X)
@@ -592,22 +602,22 @@ def tune_best_model(X_train, y_train, X_test, y_test, cancer_types, results_df, 
     else:
         best_model_to_tune = best_model_name
 
-    # ===== EXPANDED PARAMETER GRID =====
-    # Larger grid for more thorough search
+    # ===== OPTIMIZED PARAMETER GRID =====
+    # Balanced grid for thorough but faster search
     if best_model_to_tune == 'Random Forest':
         param_grid = {
-            'n_estimators': [100, 150, 200, 250, 300, 350],  # More options
-            'max_depth': [10, 15, 18, 20, 25, 30, 35],  # More depth levels
-            'min_samples_split': [2, 3, 5, 7, 10],  # More split options
-            'min_samples_leaf': [1, 2, 3, 4, 5],  # More leaf options
-            'max_features': ['sqrt', 'log2', None]  # Added: use all features
+            'n_estimators': [100, 200, 300],
+            'max_depth': [10, 15, 20],
+            'min_samples_split': [3, 7],
+            'min_samples_leaf': [1, 3],
+            'max_features': ['sqrt', 'log2'],
         }
         model_to_tune = RandomForestClassifier(random_state=42, n_jobs=-1, class_weight='balanced')
     else:
         # If another model is best, use smaller grid for computational efficiency
         param_grid = {
-            'n_estimators': [100, 200, 300],
-            'max_depth': [15, 20, 25],
+            'n_estimators': [100, 200],
+            'max_depth': [15, 20],
             'min_samples_split': [3, 7],
             'min_samples_leaf': [1, 3],
             'max_features': ['sqrt', 'log2']
@@ -621,12 +631,14 @@ def tune_best_model(X_train, y_train, X_test, y_test, cancer_types, results_df, 
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),  # Better for imbalanced data
         scoring='f1_weighted',  # Use F1 instead of accuracy (better for imbalanced)
         n_jobs=-1,
-        verbose=1,  # Show progress
+        verbose=2,  # Show detailed progress
         return_train_score=True
     )
 
-    # Fit grid search
+    # Fit grid search with progress tracking
+    print("   🔄 Starting hyperparameter tuning...\n")
     grid_search.fit(X_train, y_train)
+    print("\n   ✅ Hyperparameter tuning completed!")
 
     print(f"\n   ✅ Best parameters found:")
     for param, value in grid_search.best_params_.items():

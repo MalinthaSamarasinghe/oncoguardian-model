@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import joblib
 import warnings
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 warnings.filterwarnings('ignore')
 
@@ -118,30 +118,32 @@ class OncoGuardianPredictor:
                     'avoid': [
                         '🚫 Smoked and cured foods',
                         '🚫 Processed meats',
-                        '🚫 Fried foods',
-                        '🚫 Excessive salt',
-                        '🚫 Alcohol',
-                        '🚫 Trans fats'
+                        '🚫 Fried and deep-fried foods',
+                        '🚫 Excessive salt and sodium',
+                        '🚫 Alcohol consumption',
+                        '🚫 Trans fats and hydrogenated oils'
                     ],
+                    'diet_plan': 'Anti-inflammatory diet rich in antioxidants. Focus on colorful vegetables, omega-3 fatty acids, and limit exposure to airborne carcinogens. Consider Mediterranean diet pattern with emphasis on plant-based foods.',
                     'supplements': ['Vitamin D', 'Selenium', 'Green tea extract'],
-                    'lifestyle': ['Avoid smoking', 'Regular exercise', 'Air purification']
+                    'lifestyle': ['Avoid smoking and second-hand smoke', 'Regular exercise', 'Air purification at home']
                 },
                 'MEDIUM': {
                     'foods': [
-                        '🥗 Colorful vegetables',
+                        '🥗 Colorful vegetables (all types)',
                         '🍊 Citrus fruits (vitamin C)',
-                        '🥜 Nuts and seeds',
+                        '🥜 Nuts and seeds (vitamin E)',
                         '🐟 Fatty fish (2-3 times/week)',
-                        '🌾 Whole grains',
+                        '🌾 Whole grains (fiber)',
                         '🫘 Legumes (beans, lentils)',
-                        '🍄 Mushrooms'
+                        '🍄 Mushrooms (beta-glucans)'
                     ],
                     'avoid': [
                         '🚫 Processed foods',
-                        '🚫 Excess red meat',
-                        '🚫 Sugary snacks',
+                        '🚫 Excessive red meat',
+                        '🚫 Sugary snacks and beverages',
                         '🚫 Trans fats'
                     ],
+                    'diet_plan': 'Immune-boosting diet with emphasis on vitamins C, E, and beta-carotene. Maintain 5+ servings of fruits/vegetables daily. Include antioxidant-rich foods and stay hydrated.',
                     'supplements': ['Vitamin C', 'Vitamin E', 'Zinc'],
                     'lifestyle': ['Regular exercise', 'Stress management', 'Adequate sleep']
                 },
@@ -150,71 +152,266 @@ class OncoGuardianPredictor:
                         '🥗 Fresh fruits and vegetables',
                         '🍗 Lean proteins',
                         '🌾 Whole grains',
-                        '🥑 Healthy fats',
+                        '🥑 Healthy fats (olive oil, avocado)',
                         '🍵 Herbal teas',
-                        '💧 Water'
+                        '💧 Plenty of water'
                     ],
                     'avoid': [
                         '🚫 Limit processed foods',
                         '🚫 Avoid smoking',
                         '🚫 Moderate alcohol'
                     ],
+                    'diet_plan': 'Maintain healthy lifestyle with balanced nutrition. Focus on prevention through diet rich in antioxidants and regular physical activity. Annual check-ups recommended.',
                     'supplements': ['Multivitamin (optional)'],
-                    'lifestyle': ['Regular exercise', 'No smoking', 'Limit alcohol']
+                    'lifestyle': ['Regular exercise', 'No smoking', 'Limit alcohol', 'Stress management']
                 }
             },
             'Breast': {
                 'HIGH': {
                     'foods': [
-                        '🥦 Cruciferous vegetables',
-                        '🍵 Green tea',
-                        '🟡 Turmeric with black pepper',
-                        '🌰 Ground flaxseeds',
+                        '🥦 Cruciferous vegetables (broccoli, cauliflower, Brussels sprouts)',
+                        '🍵 Green tea (EGCG compounds for breast health)',
+                        '🟡 Turmeric with black pepper (curcumin)',
+                        '🌰 Flaxseeds (ground, for lignans)',
                         '🍄 Mushrooms (shiitake, maitake)',
-                        '🫐 Berries',
-                        '🥕 Orange vegetables',
-                        '🐟 Fatty fish'
+                        '🫐 Berries (blueberries, strawberries - ellagic acid)',
+                        '🥕 Orange vegetables (beta-carotene)',
+                        '🐟 Fatty fish (omega-3s)'
                     ],
                     'avoid': [
                         '🚫 Processed meats',
-                        '🚫 Alcohol',
-                        '🚫 High-fat dairy',
-                        '🚫 Sugary drinks',
+                        '🚫 Alcohol (even moderate amounts)',
+                        '🚫 High-fat dairy products',
+                        '🚫 Sugary beverages',
+                        '🚫 Soy isoflavone supplements (whole soy foods OK)',
                         '🚫 Trans fats'
                     ],
-                    'supplements': ['Vitamin D', 'Omega-3', 'Calcium'],
-                    'lifestyle': ['Regular mammograms', 'Maintain healthy weight', 'Exercise']
+                    'diet_plan': 'Mediterranean diet with emphasis on plant-based foods and omega-3 fatty acids. Focus on fiber-rich foods (25-30g/day). Maintain healthy body weight through diet and exercise.',
+                    'supplements': ['Vitamin D', 'Omega-3', 'Calcium (if needed)'],
+                    'lifestyle': ['Regular mammograms', 'Breast self-exams', 'Maintain healthy weight', 'Regular exercise']
                 },
                 'MEDIUM': {
                     'foods': [
-                        '🥗 Leafy greens',
-                        '🍎 Apples and berries',
-                        '🥕 Carrots',
-                        '🐟 Fish (2-3 times/week)',
-                        '🌾 Whole grains',
-                        '🫘 Legumes'
+                        '🥗 Colorful fruits and vegetables',
+                        '🌾 Whole grains (oats, quinoa, brown rice)',
+                        '🫘 Legumes (beans, lentils, chickpeas)',
+                        '🍗 Lean proteins (chicken, turkey)',
+                        '🥜 Nuts and seeds (especially walnuts)',
+                        '🥦 Fermented foods (yogurt, kimchi, kefir)',
+                        '🍵 Green tea'
                     ],
                     'avoid': [
-                        '🚫 Excess red meat',
-                        '🚫 High-fat foods',
-                        '🚫 Alcohol'
+                        '🚫 Processed foods',
+                        '🚫 Excessive red meat',
+                        '🚫 Fried foods',
+                        '🚫 High-glycemic foods and sugars'
                     ],
+                    'diet_plan': 'Balanced diet with 5+ servings of fruits/vegetables daily. Focus on fiber-rich foods and phytonutrients. Include fermented foods for gut health. Limit saturated fats.',
                     'supplements': ['Vitamin D', 'Calcium'],
-                    'lifestyle': ['Regular exercise', 'Maintain weight', 'Stress reduction']
+                    'lifestyle': ['Monthly breast self-exams', 'Annual check-ups', 'Regular exercise', 'Limit alcohol']
                 },
                 'LOW': {
                     'foods': [
-                        '🥗 Balanced diet',
-                        '🍗 Lean proteins',
+                        '🥗 Variety of fruits and vegetables',
                         '🌾 Whole grains',
-                        '🥑 Healthy fats',
+                        '🥑 Healthy fats (olive oil, avocado)',
+                        '🍗 Lean proteins',
+                        '🍵 Green tea (optional)',
+                        '💧 Water'
+                    ],
+                    'avoid': [
+                        '🚫 Limit processed foods',
+                        '🚫 Maintain healthy weight',
+                        '🚫 Moderate alcohol (if any)'
+                    ],
+                    'diet_plan': 'Standard healthy diet for prevention with emphasis on phytonutrients. Maintain healthy lifestyle with regular physical activity and breast awareness.',
+                    'supplements': ['Not necessary with balanced diet'],
+                    'lifestyle': ['Regular breast awareness', 'Healthy weight', 'Exercise 150 min/week']
+                }
+            },
+            'Colon': {
+                'HIGH': {
+                    'foods': [
+                        '🌾 High-fiber foods (oats, barley, psyllium)',
+                        '🫘 Legumes (beans, lentils, chickpeas)',
+                        '🥦 Cruciferous vegetables',
+                        '🧄 Garlic and onions (prebiotics)',
+                        '🥬 Fermented foods (yogurt, kimchi, sauerkraut)',
+                        '🥛 Calcium-rich foods (leafy greens, fortified plant milks)',
+                        '🍎 Apples (pectin)',
+                        '🌰 Brazil nuts (selenium)'
+                    ],
+                    'avoid': [
+                        '🚫 Red meat (beef, pork, lamb)',
+                        '🚫 Processed meats (bacon, sausage, ham)',
+                        '🚫 Fried foods',
+                        '🚫 Alcohol',
+                        '🚫 Refined carbohydrates',
+                        '🚫 Low-fiber foods'
+                    ],
+                    'diet_plan': 'High-fiber (30-35g/day), low-fat diet with emphasis on gut health and probiotics. Include prebiotic foods to feed healthy gut bacteria. Stay well-hydrated with fiber intake.',
+                    'supplements': ['Calcium', 'Vitamin D', 'Probiotics'],
+                    'lifestyle': ['Regular colonoscopy screening', 'Daily exercise', 'Maintain healthy weight', 'No smoking']
+                },
+                'MEDIUM': {
+                    'foods': [
+                        '🌾 Whole grains (at least 3 servings/day)',
+                        '🥗 Fresh fruits and vegetables',
+                        '🫘 Legumes',
+                        '🐟 Fish (especially fatty fish)',
+                        '🥜 Nuts and seeds',
+                        '🥬 Fermented foods'
+                    ],
+                    'avoid': [
+                        '🚫 Processed meats',
+                        '🚫 Excessive red meat (limit to 1-2x/week)',
+                        '🚫 Refined sugars',
+                        '🚫 Trans fats'
+                    ],
+                    'diet_plan': 'Fiber-rich diet with emphasis on whole foods and gut microbiome support. Aim for 25-30g fiber daily. Include variety of plant foods for diverse gut bacteria.',
+                    'supplements': ['Calcium', 'Vitamin D'],
+                    'lifestyle': ['Regular screening after 45', 'Daily physical activity', 'Hydration']
+                },
+                'LOW': {
+                    'foods': [
+                        '🌾 High-fiber foods',
+                        '🥗 Fruits and vegetables',
+                        '🌾 Whole grains',
+                        '🍗 Lean proteins',
+                        '🥛 Probiotic foods (yogurt, kefir)',
                         '💧 Plenty of water'
                     ],
                     'avoid': [
-                        '🚫 Maintain moderation'
+                        '🚫 Limit red meat',
+                        '🚫 Avoid processed foods',
+                        '🚫 Stay hydrated'
                     ],
-                    'supplements': ['Multivitamin'],
-                    'lifestyle': ['Regular check-ups', 'Exercise', 'Healthy lifestyle']
+                    'diet_plan': 'Maintain high-fiber diet for colon health. Regular physical activity and adequate hydration. Follow recommended screening guidelines based on age.',
+                    'supplements': ['None specific'],
+                    'lifestyle': ['Regular exercise', 'Fiber-rich diet', 'Hydration', 'Screening per guidelines']
+                }
+            },
+            'Prostate': {
+                'HIGH': {
+                    'foods': [
+                        '🍅 Cooked tomatoes (with olive oil for lycopene absorption)',
+                        '🍇 Pomegranate juice (ellagitannins)',
+                        '🍵 Green tea (catechins)',
+                        '🌱 Soy products (tofu, edamame, tempeh)',
+                        '🥦 Broccoli and cauliflower (sulforaphane)',
+                        '🌰 Brazil nuts (selenium)',
+                        '🐟 Fatty fish (omega-3s)',
+                        '🍄 Mushrooms'
+                    ],
+                    'avoid': [
+                        '🚫 High-fat dairy products',
+                        '🚫 Red meat',
+                        '🚫 Processed foods',
+                        '🚫 Excessive calcium supplements (>1500mg/day)',
+                        '🚫 Saturated fats',
+                        '🚫 Grilled/charred meats'
+                    ],
+                    'diet_plan': 'Low-fat, plant-based diet with lycopene-rich foods and omega-3 fatty acids. Include cooked tomatoes with healthy fat for optimal lycopene absorption. Limit dairy and calcium supplements.',
+                    'supplements': ['Vitamin D', 'Selenium', 'Green tea extract'],
+                    'lifestyle': ['Regular PSA testing as recommended', 'Exercise', 'Healthy weight', 'Limit calcium']
+                },
+                'MEDIUM': {
+                    'foods': [
+                        '🍅 Cooked tomatoes',
+                        '🥦 Cruciferous vegetables',
+                        '🐟 Fish rich in omega-3',
+                        '🥜 Nuts and seeds',
+                        '🫘 Legumes',
+                        '🍵 Green tea',
+                        '🌾 Whole grains'
+                    ],
+                    'avoid': [
+                        '🚫 High-fat foods',
+                        '🚫 Processed meats',
+                        '🚫 Excessive dairy',
+                        '🚫 Fried foods'
+                    ],
+                    'diet_plan': 'Balanced diet with emphasis on plant proteins and healthy fats. Include lycopene-rich foods several times per week. Maintain healthy weight through diet and exercise.',
+                    'supplements': ['Vitamin D', 'Omega-3'],
+                    'lifestyle': ['Regular exercise', 'Healthy weight', 'Limit alcohol', 'PSA discussion with doctor']
+                },
+                'LOW': {
+                    'foods': [
+                        '🥗 Variety of fruits and vegetables',
+                        '🌾 Whole grains',
+                        '🥑 Healthy fats',
+                        '🍗 Lean proteins',
+                        '🍅 Tomatoes',
+                        '🍵 Green tea'
+                    ],
+                    'avoid': [
+                        '🚫 Limit red meat',
+                        '🚫 Maintain healthy weight',
+                        '🚫 Regular exercise'
+                    ],
+                    'diet_plan': 'Standard healthy diet for prevention with focus on antioxidants. Regular physical activity and weight management. Discuss screening with healthcare provider.',
+                    'supplements': ['None specific'],
+                    'lifestyle': ['Regular exercise', 'Healthy diet', 'Screening discussion']
+                }
+            },
+            'Skin': {
+                'HIGH': {
+                    'foods': [
+                        '🥕 Orange/yellow vegetables (carrots, sweet potatoes, pumpkin)',
+                        '🥬 Dark leafy greens (spinach, kale, collards)',
+                        '🫐 Berries (blueberries, raspberries - ellagic acid)',
+                        '🍵 Green tea (polyphenols)',
+                        '🐟 Fatty fish (omega-3 for inflammation)',
+                        '🥜 Nuts and seeds (vitamin E)',
+                        '🍅 Tomatoes (lycopene)',
+                        '🍊 Citrus fruits (vitamin C)'
+                    ],
+                    'avoid': [
+                        '🚫 Processed foods',
+                        '🚫 Excessive sugar',
+                        '🚫 Fried foods',
+                        '🚫 Excessive alcohol',
+                        '🚫 Sun-sensitizing foods (for some - citrus before sun exposure)'
+                    ],
+                    'diet_plan': 'Antioxidant-rich diet with vitamins A, C, E and omega-3s for skin health. Focus on colorful plant foods for photoprotection. Always combine with sun protection measures.',
+                    'supplements': ['Vitamin D', 'Vitamin C', 'Vitamin E', 'Omega-3'],
+                    'lifestyle': ['Daily sunscreen SPF 30+', 'Avoid peak sun hours', 'Regular skin checks', 'No tanning beds']
+                },
+                'MEDIUM': {
+                    'foods': [
+                        '🥗 Colorful fruits and vegetables',
+                        '🍊 Citrus fruits (vitamin C for collagen)',
+                        '🥜 Nuts and seeds',
+                        '🍵 Green tea',
+                        '🌾 Whole grains',
+                        '🐟 Fish'
+                    ],
+                    'avoid': [
+                        '🚫 Processed foods',
+                        '🚫 Excessive sugar',
+                        '🚫 Trans fats'
+                    ],
+                    'diet_plan': 'Diet rich in antioxidants and vitamins for skin protection. Include vitamin C for collagen production and vitamin E for cell membrane protection.',
+                    'supplements': ['Vitamin D'],
+                    'lifestyle': ['Daily sun protection', 'Regular skin exams', 'Stay hydrated']
+                },
+                'LOW': {
+                    'foods': [
+                        '🥗 Fruits and vegetables',
+                        '🥑 Healthy fats',
+                        '🍗 Lean proteins',
+                        '🌾 Whole grains',
+                        '🍵 Green tea',
+                        '💧 Water for hydration'
+                    ],
+                    'avoid': [
+                        '🚫 Limit processed foods',
+                        '🚫 Sun protection',
+                        '🚫 Stay hydrated'
+                    ],
+                    'diet_plan': 'Maintain healthy diet with sun-protective nutrients. Continue sun-safe behaviors and regular skin self-exams.',
+                    'supplements': ['None specific'],
+                    'lifestyle': ['Sun protection', 'Skin self-exams', 'Hydration', 'Avoid tanning']
                 }
             }
         }

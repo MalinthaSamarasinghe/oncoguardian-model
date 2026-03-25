@@ -32,24 +32,26 @@ oncoguardian-model/
 ├── data/
 │   └── cancer-risk-factors.csv    # Input dataset
 ├── models/                        # Trained model artifacts
-│   ├── model.pkl                  # Trained Random Forest
+│   ├── best_params.pkl
 │   ├── label_encoders.pkl         # Feature encoders
-│   ├── scaler.pkl                 # Feature scaler
-│   ├── feature_names.pkl          # Feature list
 │   ├── cancer_types.pkl           # Cancer type names
-│   └── model_metadata.csv         # Model information
+│   ├── feature_names.pkl          # Feature list
+│   ├── label_encoders.pkl         # Feature encoders
+│   ├── model_metadata.csv         # Model information
+│   ├── model.pkl                  # Trained Random Forest
+│   └── scaler.pkl                 # Feature scaler
 ├── reports/
 │   ├── figures/                   # Visualizations
-│   │   ├── cancer_distribution_comprehensive.png
 │   │   ├── age_analysis_comprehensive.png
+│   │   ├── cancer_distribution_comprehensive.png
+│   │   ├── confusion_matrix.png
 │   │   ├── correlation_matrix.png
 │   │   ├── model_comparison.png
-│   │   ├── tuning_results.png
-│   │   ├── confusion_matrix.png
-│   │   └── roc_curves.png
+│   │   ├── roc_curves.png
+│   │   └── tuning_results.png
 │   └── metrics/                   # CSV metrics files
-│       ├── model_comparison.csv
-│       └── classification_report.csv
+│       ├── classification_report.csv
+│       └── model_comparison.csv
 ├── requirements.txt
 └── README.md
 ```
@@ -338,7 +340,7 @@ Shows which cancer types the model predicts best
 4. **ROC Curves (One-vs-Rest)**
 ```
 AUC (Area Under Curve) = 0.95 means:
-- If you randomly pick one positive and one negative sample
+- If randomly pick one positive and one negative sample
 - Model would rank the positive higher 95% of the time
 - Range: 0.5 (random) to 1.0 (perfect)
 ```
@@ -442,17 +444,17 @@ print(recommendations)
 ### **Quick Start**
 
 ```bash
-# 1. Run training pipeline with your real data
+# 1. Run training pipeline with the real data
 python src/training.py
 
 # 2. Make predictions
 python src/predictor.py
 ```
 
-### **With Your Own Data**
+### **With Own Data**
 
 ```bash
-# 1. Place your CSV in data/cancer-risk-factors.csv
+# 1. Place the CSV in data/cancer-risk-factors.csv
 # 2. Make sure it has these columns:
 #    - Cancer_Type (target)
 #    - Age, Gender, Smoking, Alcohol_Use, Obesity, Family_History
@@ -628,8 +630,8 @@ Off-diagonal = Misclassifications
 
 ### **Error: File not found**
 ```
-Solution: Ensure data/cancer-risk-factors.csv exists in your project
-Place your CSV file in the data/ directory
+Solution: Ensure data/cancer-risk-factors.csv exists in the project
+Place the CSV file in the data/ directory
 ```
 
 ### **Error: Module not found**
@@ -673,4 +675,4 @@ This code provides a **complete ML pipeline** for cancer risk prediction:
 8. **Make predictions** with the trained model
 9. **Provide recommendations** based on risk
 
-The modular structure makes it easy to understand each step and modify for your specific needs!
+The modular structure makes it easy to understand each step and modify for the specific needs!

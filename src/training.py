@@ -24,25 +24,25 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-from datetime import datetime
 
 # Scikit-learn imports
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, GridSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import LabelEncoder, StandardScaler, label_binarize
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
-    classification_report, confusion_matrix, roc_auc_score,
-    roc_curve, auc, ConfusionMatrixDisplay
+    classification_report, confusion_matrix, roc_curve, auc
 )
 
 # XGBoost import (optional - requires OpenMP on macOS)
 # To use XGBoost on macOS, run: brew install libomp
-# from xgboost import XGBClassifier
-XGBOOST_AVAILABLE = False
+try:
+    from xgboost import XGBClassifier
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
 
 # Setup
 warnings.filterwarnings('ignore')

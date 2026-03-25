@@ -9,19 +9,19 @@ oncoguardian-model/
 ├── data/                          # Input datasets
 │   └── cancer-risk-factors.csv
 ├── models/                        # Trained models and artifacts
-│   ├── model.pkl
-│   ├── label_encoders.pkl
-│   ├── scaler.pkl
-│   ├── feature_names.pkl
+│   ├── best_params.pkl
 │   ├── cancer_types.pkl
-│   └── model_metadata.csv
+│   ├── feature_names.pkl
+│   ├── label_encoders.pkl
+│   ├── model_metadata.csv
+│   ├── model.pkl
+│   └── scaler.pkl
 ├── reports/                       # Generated reports and visualizations
 │   ├── figures/                   # Plots and charts
 │   └── metrics/                   # Performance metrics
 ├── src/                           # Source code
 │   ├── training.py                # Main training pipeline
-│   ├── predictor.py               # Prediction and recommendation system
-│   └── utils.py                   # Utility functions
+│   └── predictor.py               # Prediction and recommendation system
 ├── requirements.txt               # Python dependencies
 └── README.md                      # This file
 ```
@@ -33,7 +33,7 @@ oncoguardian-model/
    pip install -r requirements.txt
    ```
 
-2. **Your dataset is ready!**
+2. **Dataset is ready!**
    - ✅ `data/cancer-risk-factors.csv` - Contains 2000 real cancer risk factor samples
    - Ready to use immediately!
 
@@ -41,7 +41,7 @@ oncoguardian-model/
    ```bash
    python src/training.py
    ```
-   This trains the model with your real data (2000 samples, 15 features, 5 cancer types).
+   This trains the model with the real data (2000 samples, 15 features, 5 cancer types).
 
 ## Features
 

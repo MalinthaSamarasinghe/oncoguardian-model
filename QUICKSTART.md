@@ -2,7 +2,7 @@
 
 ## 🎯 Ready to Train!
 
-Your project has **real cancer risk factor data** ready to use. No sample data generation needed!
+The project has **real cancer risk factor data** ready to use.
 
 ---
 
@@ -12,7 +12,7 @@ Your project has **real cancer risk factor data** ready to use. No sample data g
 python src/training.py
 ```
 
-This runs all 7 training steps using your **2000 real samples** (~3-5 minutes).
+This runs all 7 training steps using **2000 real samples** dataset (~3-5 minutes).
 
 **Expected Output:**
 ```
@@ -52,8 +52,10 @@ After training, results are saved in:
 ```
 reports/
 ├── figures/                              ← Visualizations
+│   ├── age_analysis_comprehensive.png
 │   ├── cancer_distribution_comprehensive.png
 │   ├── confusion_matrix.png              ← Show prediction accuracy
+│   ├── correlation_matrix.png
 │   ├── model_comparison.png              ← 4 models compared
 │   ├── roc_curves.png
 │   └── tuning_results.png
@@ -70,7 +72,7 @@ python src/predictor.py
 
 ---
 
-## 📊 Your Cancer Risk Factor Dataset
+## 📊 Cancer Risk Factor Dataset
 
 ### Dataset Information:
 - **Total Records:** 2000 real cancer risk factor samples
@@ -127,21 +129,18 @@ ls reports/metrics/
 
 ## 📊 Expected Results
 
-With your 2000 real samples:
+With 2000 real samples:
 - **Accuracy:** ~77-78%
 - **F1-Score:** ~0.77
 - **Per-cancer-type accuracy:** 59-85% (varies by type)
-
-These are realistic results suitable for your university assignment!
 
 ---
 
 ## ✅ Why This Dataset is Perfect
 
-1. ✅ **Real data** - Actual cancer risk factor measurements
+1. ✅ **Real data & Professional quality** - Actual cancer risk factor measurements
 2. ✅ **Large dataset** - 2000 samples for robust learning
 3. ✅ **Clean encoding** - Numeric values ready to use
-4. ✅ **Professional quality** - Results suitable for university submission
 
 ---
 
@@ -149,14 +148,14 @@ These are realistic results suitable for your university assignment!
 
 ### Error: "File not found"
 ```bash
-# Verify your data file exists
+# Verify the data file exists
 ls -la data/cancer-risk-factors.csv
 ```
 
 ### Model accuracy seems low?
-Make sure you're using the correct data file:
+Make sure to use the correct data file:
 - ✅ Correct: `data/cancer-risk-factors.csv` (2000 real samples)
-- Use the dataset that was provided with your project
+- Use the correct dataset that was provided with the project
 
 ### Training takes 3-5 minutes
 This is normal! The model:
@@ -167,26 +166,4 @@ This is normal! The model:
 
 ---
 
-## 📝 For Your University Assignment
-
-You're now using:
-- ✅ **2000 real cancer risk factor samples**
-- ✅ **Professional ML pipeline**
-- ✅ **Complete documentation**
-- ✅ **Ready-to-present visualizations**
-
-Perfect for your final year project! 🎓
-
----
-
-## 📖 Additional Resources
-
-- **CODE_EXPLANATION.md** - Detailed technical guide
-- **FLUTTER_INTEGRATION.md** - Mobile app integration
-- **CHANGES_SUMMARY.md** - What was improved
-- **README.md** - Project overview
-
----
-
 Start now: `python src/training.py` 🚀
-

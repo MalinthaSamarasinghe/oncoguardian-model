@@ -3,15 +3,30 @@
 OncoGuardian Model Training Pipeline
 ========================================
 
-A comprehensive machine learning pipeline for personalized cancer risk prediction.
+A comprehensive 8-step machine learning pipeline for personalized cancer risk prediction.
+
 This module contains all functions for:
-- Data loading and exploration
-- Exploratory Data Analysis (EDA)
-- Data preprocessing
-- Model training and comparison
-- Hyperparameter tuning
-- Model evaluation
-- Model artifact saving
+1. Data loading and exploration
+2. Exploratory Data Analysis (EDA) with visualizations
+3. Feature Engineering (10 cancer-risk optimized engineered features)
+4. Data preprocessing and scaling
+5. Model training and comparison (5 algorithms)
+6. Hyperparameter tuning with expanded grid search (1,260 combinations)
+7. Comprehensive model evaluation with multiple metrics
+8. Model artifact saving for deployment
+
+Feature Engineering Methodology:
+- Age-adjusted cumulative exposure (smoking-years, alcohol-years)
+- Metabolic and inflammatory markers
+- Protective vs risk factor balance scoring
+- Cancer-specific interaction terms
+- Base: 16 features → Enhanced: 26 features (66% increase)
+
+Key Features:
+- Class weight balancing for imbalanced cancer type distribution
+- Stratified K-Fold cross-validation for robust evaluation
+- Dynamic model selection based on F1-Score
+- XGBoost support with graceful fallback on macOS (OpenMP)
 
 Author: OncoGuardian Team
 Date: 2024
@@ -129,9 +144,6 @@ def perform_advanced_eda(df):
     
     Args:
         df (pd.DataFrame): Input data
-        
-    Returns:
-        pd.DataFrame: Age statistics by cancer type
     """
     print_section("ADVANCED EXPLORATORY DATA ANALYSIS", 2)
 
@@ -188,12 +200,14 @@ def perform_advanced_eda(df):
     plt.grid(alpha=0.3)
 
     plt.subplot(1, 2, 2)
-    df.boxplot(column='Age', by='Cancer_Type', figsize=(12, 6))
+    # Create boxplot data for each cancer type
+    age_by_cancer = [df[df['Cancer_Type'] == cancer]['Age'].values for cancer in sorted(df['Cancer_Type'].unique())]
+    plt.boxplot(age_by_cancer, labels=sorted(df['Cancer_Type'].unique()))
     plt.title('Age Distribution Boxplot by Cancer Type', fontsize=14, fontweight='bold')
-    plt.suptitle('')
-    plt.xlabel('Cancer Type')
-    plt.ylabel('Age')
-    plt.xticks(rotation=45)
+    plt.xlabel('Cancer Type', fontsize=12)
+    plt.ylabel('Age', fontsize=12)
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(alpha=0.3, axis='y')
 
     plt.tight_layout()
     plt.savefig('reports/figures/age_analysis_comprehensive.png', dpi=300, bbox_inches='tight')
@@ -228,8 +242,6 @@ def perform_advanced_eda(df):
         plt.savefig('reports/figures/correlation_matrix.png', dpi=300, bbox_inches='tight')
         plt.show()
 
-    return age_stats
-
 
 # ============================================
 # 3. FEATURE ENGINEERING
@@ -237,70 +249,94 @@ def perform_advanced_eda(df):
 
 def create_engineered_features(X):
     """
-    Create new features from existing ones to improve model performance.
+    Create scientifically-sound engineered features for cancer risk prediction.
+    
+    Based on epidemiological research, these features capture:
+    - Cumulative exposure risks (age × behavioral factors)
+    - Inflammatory/metabolic markers
+    - Protective factor balance
+    - Cancer-specific risk interactions
     
     Args:
-        X (pd.DataFrame): Feature matrix with base features
+        X (pd.DataFrame): Feature matrix with base features (16 features)
         
     Returns:
-        pd.DataFrame: Feature matrix with engineered features added
+        pd.DataFrame: Feature matrix with engineered features (10 new features, 26 total)
     """
     X_eng = X.copy()
     
-    print("\n   🔧 Creating engineered features...")
+    print("\n   🔧 Creating engineered features (cancer risk optimized)...")
     
-    # 1. ===== LIFESTYLE RISK SCORE =====
-    # Combination of smoking, alcohol, and obesity
-    X_eng['Lifestyle_Risk'] = (X['Smoking'] + X['Alcohol_Use'] + X['Obesity']) / 3
-    print("      ✅ Calculated Lifestyle_Risk (Smoking+Alcohol+Obesity)/3")
+    # ===== 1. CUMULATIVE SMOKING EXPOSURE (Smoking-Years Equivalent) =====
+    # Smoking risk increases with both intensity AND duration
+    # Age helps estimate duration; Smoking level + Age = cumulative damage
+    X_eng['Smoking_Years_Risk'] = X['Smoking'] * (X['Age'] / 40)
+    print("      ✅ Calculated Smoking_Years_Risk (Smoking × Age)")
     
-    # 2. ===== DIET QUALITY SCORE =====
-    # Higher fruit/veg intake is good, red/processed meat is bad
-    X_eng['Diet_Quality'] = (X['Fruit_Veg_Intake'] * 2 - X['Diet_Red_Meat'] - X['Diet_Salted_Processed']) / 4
-    print("      ✅ Calculated Diet_Quality (higher is better diet)")
+    # ===== 2. CUMULATIVE ALCOHOL EXPOSURE =====
+    # Similar to smoking - chronic alcohol is dose AND duration dependent
+    X_eng['Alcohol_Years_Risk'] = X['Alcohol_Use'] * (X['Age'] / 40)
+    print("      ✅ Calculated Alcohol_Years_Risk (Alcohol × Age)")
     
-    # 3. ===== ENVIRONMENTAL EXPOSURE SCORE =====
-    # Air pollution + occupational hazards
-    X_eng['Environmental_Risk'] = (X['Air_Pollution'] + X['Occupational_Hazards']) / 2
-    print("      ✅ Calculated Environmental_Risk (Air+Occupational)/2")
+    # ===== 3. METABOLIC RISK SCORE =====
+    # Obesity + sedentary lifestyle = high metabolic syndrome risk
+    # High metabolic score increases risk for most cancers
+    X_eng['Metabolic_Risk'] = (X['Obesity'] * 2 + (10 - X['Physical_Activity'])) / 3
+    print("      ✅ Calculated Metabolic_Risk (Obesity + Sedentary)")
     
-    # 4. ===== GENETIC/HEALTH RISK SCORE =====
-    # Family history + BRCA mutation (binary indicators)
-    X_eng['Genetic_Risk'] = X['Family_History'] + X['BRCA_Mutation']
-    print("      ✅ Calculated Genetic_Risk (Family_History+BRCA)")
+    # ===== 4. INFLAMMATORY MARKERS SCORE =====
+    # H. pylori, poor diet, high obesity = chronic inflammation
+    # Inflammation is a key cancer risk driver
+    X_eng['Inflammatory_Score'] = (X['H_Pylori_Infection'] * 2 + 
+                                    X['Diet_Red_Meat'] + 
+                                    X['Obesity']) / 4
+    print("      ✅ Calculated Inflammatory_Score (HPylori + DietQuality + Obesity)")
     
-    # 5. ===== ACTIVITY-OBESITY RATIO =====
-    # Physical activity counteracting obesity risk
-    X_eng['Activity_Obesity_Ratio'] = X['Physical_Activity'] / (X['Obesity'] + 1)
-    print("      ✅ Calculated Activity_Obesity_Ratio")
+    # ===== 5. GENETIC VULNERABILITY SCORE =====
+    # Family history + BRCA + Age = genetic risk amplification
+    # Younger age with BRCA/FamHist = higher relative risk
+    X_eng['Genetic_Vulnerability'] = (X['Family_History'] + X['BRCA_Mutation']) * (40 / (X['Age'] + 1))
+    print("      ✅ Calculated Genetic_Vulnerability (BRCA/FamHist × Age)")
     
-    # 6. ===== INFECTION RISK =====
-    # H Pylori + Age interaction (older + infection = higher risk)
-    X_eng['Infection_Age_Risk'] = X['H_Pylori_Infection'] * (X['Age'] / 50)
-    print("      ✅ Calculated Infection_Age_Risk")
+    # ===== 6. OCCUPATIONAL + ENVIRONMENTAL EXPOSURE =====
+    # Combined environmental carcinogen exposure
+    X_eng['Environmental_Exposure'] = (X['Occupational_Hazards'] + X['Air_Pollution']) / 2
+    print("      ✅ Calculated Environmental_Exposure (Occupational + Air)")
     
-    # 7. ===== CALCIUM-DIET INTERACTION =====
-    # Calcium intake modulating diet quality
-    X_eng['Calcium_Diet_Protection'] = X['Calcium_Intake'] * X['Diet_Quality']
-    print("      ✅ Calculated Calcium_Diet_Protection")
+    # ===== 7. NUTRITION DEFENSE SCORE =====
+    # Protective nutrition (fruits/veggies + calcium) vs harmful diet
+    # Higher protective - harmful = better
+    X_eng['Nutrition_Defense'] = (X['Fruit_Veg_Intake'] * 1.5 + X['Calcium_Intake']) - X['Diet_Red_Meat']
+    print("      ✅ Calculated Nutrition_Defense (Protective - Harmful)")
     
-    # 8. ===== AGE-RISK INTERACTION =====
-    # Age amplifies smoking risk
-    X_eng['Age_Smoking_Risk'] = X['Age'] * X['Smoking'] / 10
-    print("      ✅ Calculated Age_Smoking_Risk")
+    # ===== 8. LIFESTYLE BALANCE SCORE =====
+    # Active + good diet + no smoking/alcohol = protective
+    # Sedentary + poor diet + smoking/alcohol = risky
+    X_eng['Lifestyle_Balance'] = ((X['Physical_Activity'] + X['Fruit_Veg_Intake'] + X['Calcium_Intake']) - 
+                                  (X['Smoking'] + X['Alcohol_Use'] + X['Obesity'])) / 6
+    print("      ✅ Calculated Lifestyle_Balance (Protective - Risk factors)")
     
-    # 9. ===== GENDER-SPECIFIC RISK =====
-    # Female + BRCA is very high risk; Male + Prostate factors
-    X_eng['Gender_Genetic_Risk'] = X['Gender'] * X['BRCA_Mutation']
-    print("      ✅ Calculated Gender_Genetic_Risk")
+    # ===== 9. HORMONAL/METABOLIC AGING RISK =====
+    # Age × Obesity × Sedentary = accelerated metabolic aging
+    # Affects estrogen, insulin sensitivity, etc. (relates to breast, colon, prostate)
+    X_eng['Metabolic_Age_Risk'] = (X['Age'] * X['Obesity'] * (10 - X['Physical_Activity'])) / 100
+    print("      ✅ Calculated Metabolic_Age_Risk (Age × Obesity × Activity)")
     
-    # 10. ===== OVERALL PROTECTIVE FACTORS =====
-    # High physical activity + good diet + calcium intake
-    X_eng['Protective_Factors'] = (X['Physical_Activity'] + X['Diet_Quality'] + X['Calcium_Intake']) / 3
-    print("      ✅ Calculated Protective_Factors score")
+    # ===== 10. CUMULATIVE CARCINOGENIC BURDEN =====
+    # Overall carcinogenic exposure index combining ALL major pathways
+    # Higher = more cancer risk
+    X_eng['Total_Carcinogen_Burden'] = (X['Smoking'] + X['Alcohol_Use'] + 
+                                        X['Occupational_Hazards'] + X['Air_Pollution'] +
+                                        X['H_Pylori_Infection'] + X['Obesity']) / 6
+    print("      ✅ Calculated Total_Carcinogen_Burden (All exposures)")
     
     print(f"\n   🎉 Feature engineering complete! Added 10 new features")
-    print(f"      Original features: {len(X)} → Enhanced features: {len(X_eng)}")
+    print(f"      Original features: {len(X)} (16 base) → Enhanced features: {len(X_eng)} (26 total)")
+    print(f"\n   📋 Engineering methodology:")
+    print(f"      • Age-adjusted factors (cumulative exposure model)")
+    print(f"      • Metabolic & inflammatory markers")
+    print(f"      • Protective vs risk factor balance")
+    print(f"      • Cancer-specific interaction terms")
     
     return X_eng
 
@@ -796,7 +832,7 @@ def main():
         return
 
     # Step 2: Perform EDA
-    age_stats = perform_advanced_eda(df)
+    perform_advanced_eda(df)
 
     # Step 3: Preprocess data
     X, y, label_encoders, scaler, feature_names, cancer_types = preprocess_data(df)
@@ -813,7 +849,7 @@ def main():
     # Step 5: Train and compare models
     results_df, trained_models = train_and_compare_models(X_train, X_test, y_train, y_test, cancer_types)
 
-    # Step 6: Hyperparameter tuning (now tunes the best model automatically)
+    # Step 6: Hyperparameter tuning
     best_model, best_params, best_model_name = tune_best_model(X_train, y_train, X_test, y_test, cancer_types, results_df, trained_models)
 
     # Step 7: Comprehensive evaluation
@@ -829,7 +865,7 @@ def main():
     # Final summary
     print("\n📊 FINAL MODEL SUMMARY:")
     print(f"   Model Type: {best_model_name} (Optimized)")
-    print(f"   Number of Features: {len(feature_names)} (15 base + 10 engineered)")
+    print(f"   Number of Features: {len(feature_names)} (16 base + 10 engineered = 26 total)")
     print(f"   Cancer Types: {', '.join(cancer_types)}")
     print(f"   Best Parameters: {best_params}")
     test_accuracy = accuracy_score(y_test, y_pred)

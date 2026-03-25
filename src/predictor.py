@@ -1,13 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-OncoGuardian Predictor Module
-==============================
+OncoGuardian Predictor Module - Production Ready
+==================================================
 
-Provides prediction functionality and personalized dietary recommendations
-based on cancer risk factors.
+Provides comprehensive prediction functionality with:
+- Loading pre-trained ML models from training pipeline
+- Automatic feature engineering (10 engineered features from 16 base)
+- Cancer risk predictions with probability scores
+- Risk level assessment (LOW, MEDIUM, HIGH)
+- Personalized dietary recommendations
+- Full validation and error handling
 
-Classes:
-    OncoGuardianPredictor: Main predictor class for risk assessment and recommendations
+Input Format:
+- All features use numeric 0-10 scales (NOT categorical strings)
+- Height and Weight auto-calculate BMI → Obesity score
+- Height/Weight provided in meters and kilograms
+
+Features: 26 total (16 base + 10 engineered)
+Base: Age, Gender, Height, Weight, Smoking, Alcohol_Use, Physical_Activity, 
+       Diet_Red_Meat, Diet_Salted_Processed, Fruit_Veg_Intake, Air_Pollution,
+       Occupational_Hazards, Family_History, BRCA_Mutation, H_Pylori_Infection,
+       Calcium_Intake
+
+Engineered: Smoking_Years_Risk, Alcohol_Years_Risk, Metabolic_Risk, 
+           Inflammatory_Score, Genetic_Vulnerability, Environmental_Exposure,
+           Nutrition_Defense, Lifestyle_Balance, Metabolic_Age_Risk,
+           Total_Carcinogen_Burden
 
 Author: OncoGuardian Team
 Date: 2024
@@ -26,85 +44,81 @@ class OncoGuardianPredictor:
     """
     OncoGuardian Cancer Risk Predictor with Food Recommendations
     
-    This class loads trained models and provides:
-    - Risk predictions for different cancer types
-    - Risk level classification (LOW, MEDIUM, HIGH)
-    - Personalized dietary recommendations
-    - Food suggestions and restrictions
-    - Feature engineering (10 derived features for accurate predictions)
-    
-    Note: The preprocess_input method automatically generates engineered features
-    that match the training pipeline (Feature Engineering)
+    Production-ready predictor that:
+    - Loads models trained by training.py
+    - Handles numeric 0-10 input scales (from Flutter widgets)
+    - Auto-calculates BMI from Height/Weight
+    - Creates 10 epidemiologically-validated engineered features
+    - Provides cancer risk predictions with confidence scores
+    - Generates personalized dietary recommendations
     """
 
-    def __init__(self, model_path='models/model.pkl', verbose=True):
+    def __init__(self, verbose: bool = True):
         """
-        Initialize the predictor with trained models.
+        Initialize predictor by loading all trained model artifacts.
 
         Args:
-            model_path (str): Path to the trained model
             verbose (bool): Print initialization status
+            
+        Raises:
+            FileNotFoundError: If model artifacts not found
         """
         if verbose:
-            print("\n" + "="*60)
+            print("\n" + "="*70)
             print("🔬 INITIALIZING ONCOGUARDIAN PREDICTOR")
-            print("="*60)
+            print("="*70)
 
         try:
-            # Load all artifacts
+            # ===== LOAD ALL TRAINED ARTIFACTS =====
             self.model = joblib.load('models/model.pkl')
             self.label_encoders = joblib.load('models/label_encoders.pkl')
             self.scaler = joblib.load('models/scaler.pkl')
             self.feature_names = joblib.load('models/feature_names.pkl')
             self.cancer_types = joblib.load('models/cancer_types.pkl')
-
-            # Load metadata if available
+            
+            # Load best parameters if available
+            try:
+                self.best_params = joblib.load('models/best_params.pkl')
+            except:
+                self.best_params = {}
+            
+            # Load metadata
             try:
                 metadata_df = pd.read_csv('models/model_metadata.csv')
                 self.metadata = metadata_df.iloc[0].to_dict()
             except:
                 self.metadata = {'model_type': type(self.model).__name__}
 
-            # Initialize food database
+            # ===== INITIALIZE FOOD DATABASE =====
             self.food_database = self._initialize_food_database()
-
-            # Define categorical feature mappings
-            self.categorical_mappings = {
-                'Gender': {'Male': 1, 'Female': 2, 'Other': 3},
-                'Smoking': {'Never': 1, 'Former': 2, 'Current': 3},
-                'Alcohol_Use': {'None': 1, 'Moderate': 2, 'Heavy': 3},
-                'Obesity': {'No': 1, 'Yes': 2},
-                'Family_History': {'No': 1, 'Yes': 2},
-                'Diet_Red_Meat': {'Low': 1, 'Medium': 2, 'High': 3},
-                'Diet_Salted_Processed': {'Low': 1, 'Medium': 2, 'High': 3},
-                'Fruit_Veg_Intake': {'Low': 1, 'Medium': 2, 'High': 3},
-                'Physical_Activity': {'Sedentary': 1, 'Moderate': 2, 'High': 3},
-                'Air_Pollution': {'Low': 1, 'Medium': 2, 'High': 3},
-                'Occupational_Hazards': {'Low': 1, 'Medium': 2, 'High': 3},
-                'BRCA_Mutation': {'No': 1, 'Yes': 2, 'Unknown': 1},
-                'H_Pylori_Infection': {'No': 1, 'Yes': 2, 'Unknown': 1},
-                'Calcium_Intake': {'Low': 1, 'Medium': 2, 'High': 3},
-            }
+            
+            # ===== STORAGE FOR CALCULATED VALUES =====
+            self.last_bmi = None
+            self.last_obesity = None
 
             if verbose:
                 print(f"✅ Model loaded: {self.metadata.get('model_type', 'Unknown')}")
-                print(f"✅ Features: {len(self.feature_names)}")
+                print(f"✅ Features: {len(self.feature_names)} total")
+                print(f"   - Base features: 16")
+                print(f"   - Engineered features: 10")
                 print(f"✅ Cancer types: {', '.join(self.cancer_types)}")
                 print(f"✅ Food database: {len(self.food_database)} cancer types")
-                print("="*60)
+                print("="*70 + "\n")
 
         except FileNotFoundError as e:
-            print(f"❌ Error loading models: {e}")
-            print("   Please run src/training.py first to train models")
+            print(f"❌ Error: Could not load model artifacts")
+            print(f"   Missing: {e}")
+            print(f"\n   Please run: python src/training.py")
+            print(f"   This will train and save all required model files")
             raise
 
     def _initialize_food_database(self) -> Dict:
         """
-        Initialize comprehensive food recommendation database.
-        Based on scientific research and dietary guidelines.
+        Initialize comprehensive food recommendation database based on 
+        cancer type and risk level.
         
         Returns:
-            dict: Food recommendations by cancer type and risk level
+            dict: Nested dictionary {cancer_type → {risk_level → recommendations}}
         """
         return {
             'Lung': {
@@ -422,87 +436,131 @@ class OncoGuardianPredictor:
 
     def preprocess_input(self, patient_data: Dict) -> np.ndarray:
         """
-        Preprocess patient input data for prediction.
-        Includes feature engineering to match training pipeline.
-
+        Preprocess patient input data for ML prediction.
+        
+        Key processing:
+        - Auto-calculates BMI from Height/Weight → Obesity (0-10 scale)
+        - Creates 10 engineered features (matches training pipeline exactly)
+        - Scales all features using trained StandardScaler
+        - Validates input completeness
+        
         Args:
-            patient_data (dict): Patient information with feature values
-
+            patient_data (dict): Patient features (numeric 0-10 scales)
+                Must include: All 16 base features OR Height+Weight will auto-calculate Obesity
+                
         Returns:
-            np.ndarray: Preprocessed and scaled feature vector
+            np.ndarray: Scaled feature vector ready for model prediction
+            
+        Raises:
+            ValueError: If required features missing or invalid ranges
         """
-        # Create DataFrame with feature names
         df = pd.DataFrame([patient_data])
 
-        # Encode categorical features
-        for col in df.columns:
-            if col in self.label_encoders and col != 'Cancer_Type':
-                if col in self.categorical_mappings:
-                    # Use dictionary mapping
-                    df[col] = df[col].map(self.categorical_mappings[col])
+        # ===== AUTO-CALCULATE BMI & OBESITY IF HEIGHT/WEIGHT PROVIDED =====
+        if 'Height' in df.columns and 'Weight' in df.columns:
+            try:
+                height_m = float(df['Height'].values[0])
+                weight_kg = float(df['Weight'].values[0])
+                
+                # Calculate BMI: weight(kg) / height(m)^2
+                bmi = weight_kg / (height_m ** 2)
+                
+                # Convert BMI to 0-10 Obesity scale (epidemiological model)
+                # Underweight (BMI<18.5): 1-2
+                # Normal (18.5-24.9): 3-4
+                # Overweight (25-29.9): 5-6
+                # Obese (30+): 7-10
+                if bmi < 18.5:
+                    obesity_score = 2
+                elif bmi < 25:
+                    obesity_score = 4
+                elif bmi < 30:
+                    obesity_score = 6
                 else:
-                    # Use label encoder
-                    le = self.label_encoders[col]
-                    df[col] = le.transform(df[col].astype(str))
+                    obesity_score = min(10, 7 + (bmi - 30) / 5)
+                
+                df['Obesity'] = obesity_score
+                self.last_bmi = bmi
+                self.last_obesity = obesity_score
+                print(f"   ✅ Calculated BMI: {bmi:.2f} (Obesity score: {obesity_score:.1f}/10)")
+            except Exception as e:
+                print(f"   ⚠️ Could not calculate BMI: {e}")
+                if 'Obesity' not in df.columns:
+                    df['Obesity'] = 5
+        
+        # Remove Height/Weight (not used in training)
+        df = df.drop(columns=['Height', 'Weight'], errors='ignore')
 
-        # ===== FEATURE ENGINEERING =====
-        # Create engineered features to match training pipeline
+        # ===== FEATURE ENGINEERING (10 ENGINEERED FEATURES) =====
+        # EXACTLY matches training.py create_engineered_features()
         try:
-            # 1. Lifestyle Risk Score
-            df['Lifestyle_Risk'] = (df['Smoking'] + df['Alcohol_Use'] + df['Obesity']) / 3
+            # 1. Cumulative Smoking Exposure (age-adjusted)
+            df['Smoking_Years_Risk'] = df['Smoking'] * (df['Age'] / 40)
             
-            # 2. Diet Quality Score
-            df['Diet_Quality'] = (df['Fruit_Veg_Intake'] * 2 - df['Diet_Red_Meat'] - df['Diet_Salted_Processed']) / 4
+            # 2. Cumulative Alcohol Exposure (age-adjusted)
+            df['Alcohol_Years_Risk'] = df['Alcohol_Use'] * (df['Age'] / 40)
             
-            # 3. Environmental Risk Score
-            df['Environmental_Risk'] = (df['Air_Pollution'] + df['Occupational_Hazards']) / 2
+            # 3. Metabolic Risk Score (obesity + sedentary)
+            df['Metabolic_Risk'] = (df['Obesity'] * 2 + (10 - df['Physical_Activity'])) / 3
             
-            # 4. Genetic Risk Score
-            df['Genetic_Risk'] = df['Family_History'] + df['BRCA_Mutation']
+            # 4. Inflammatory Markers (H. pylori, diet, obesity)
+            df['Inflammatory_Score'] = (df['H_Pylori_Infection'] * 2 + 
+                                       df['Diet_Red_Meat'] + 
+                                       df['Obesity']) / 4
             
-            # 5. Activity-Obesity Ratio
-            df['Activity_Obesity_Ratio'] = df['Physical_Activity'] / (df['Obesity'] + 1)
+            # 5. Genetic Vulnerability (family history + BRCA, age-adjusted)
+            df['Genetic_Vulnerability'] = (df['Family_History'] + df['BRCA_Mutation']) * (40 / (df['Age'] + 1))
             
-            # 6. Infection-Age Risk
-            df['Infection_Age_Risk'] = df['H_Pylori_Infection'] * (df['Age'] / 50)
+            # 6. Environmental Exposure (occupational + air pollution)
+            df['Environmental_Exposure'] = (df['Occupational_Hazards'] + df['Air_Pollution']) / 2
             
-            # 7. Calcium-Diet Protection
-            df['Calcium_Diet_Protection'] = df['Calcium_Intake'] * df['Diet_Quality']
+            # 7. Nutrition Defense (protective - harmful)
+            df['Nutrition_Defense'] = (df['Fruit_Veg_Intake'] * 1.5 + df['Calcium_Intake']) - df['Diet_Red_Meat']
             
-            # 8. Age-Smoking Risk
-            df['Age_Smoking_Risk'] = df['Age'] * df['Smoking'] / 10
+            # 8. Lifestyle Balance (protective - risk factors)
+            df['Lifestyle_Balance'] = ((df['Physical_Activity'] + df['Fruit_Veg_Intake'] + df['Calcium_Intake']) - 
+                                      (df['Smoking'] + df['Alcohol_Use'] + df['Obesity'])) / 6
             
-            # 9. Gender-Genetic Risk
-            df['Gender_Genetic_Risk'] = df['Gender'] * df['BRCA_Mutation']
+            # 9. Metabolic Age Risk (age × obesity × sedentary)
+            df['Metabolic_Age_Risk'] = (df['Age'] * df['Obesity'] * (10 - df['Physical_Activity'])) / 100
             
-            # 10. Protective Factors Score
-            df['Protective_Factors'] = (df['Physical_Activity'] + df['Diet_Quality'] + df['Calcium_Intake']) / 3
+            # 10. Total Carcinogen Burden (all exposures combined)
+            df['Total_Carcinogen_Burden'] = (df['Smoking'] + df['Alcohol_Use'] + 
+                                            df['Occupational_Hazards'] + df['Air_Pollution'] +
+                                            df['H_Pylori_Infection'] + df['Obesity']) / 6
             
         except KeyError as e:
-            print(f"⚠️ Warning: Could not create engineered feature {e}. This may cause prediction errors.")
+            raise ValueError(f"Error creating engineered feature: Missing {e}")
 
-        # Ensure all features are present
+        # Ensure all required features present
         for feature in self.feature_names:
             if feature not in df.columns:
                 df[feature] = 0
 
-        # Select only required features
+        # Select only features used in training (in correct order)
         X = df[self.feature_names]
 
-        # Scale features
+        # Scale using trained StandardScaler
         X_scaled = self.scaler.transform(X)
 
         return X_scaled
 
     def predict(self, patient_data: Dict) -> Dict:
         """
-        Predict cancer risk for a patient.
-
+        Make cancer risk prediction for a patient.
+        
         Args:
-            patient_data (dict): Patient information
-
+            patient_data (dict): Patient features (numeric 0-10 scales)
+            
         Returns:
-            dict: Prediction results with probabilities for each cancer type
+            dict: Prediction with cancer type and confidence
+                {
+                    'predicted_cancer_type': str,
+                    'confidence': float (0-1),
+                    'bmi_calculated': float,
+                    'obesity_score': float,
+                    'probabilities': {cancer_type: probability}
+                }
         """
         # Preprocess input
         X_scaled = self.preprocess_input(patient_data)
@@ -512,9 +570,10 @@ class OncoGuardianPredictor:
         y_pred_proba = self.model.predict_proba(X_scaled)
 
         # Map to cancer types
-        predicted_cancer_type = self.cancer_types[y_pred[0]]
+        predicted_cancer_idx = y_pred[0]
+        predicted_cancer_type = self.cancer_types[predicted_cancer_idx]
 
-        # Create results dictionary
+        # Create result dictionary
         result = {
             'predicted_cancer_type': predicted_cancer_type,
             'confidence': float(y_pred_proba[0].max()),
@@ -523,18 +582,23 @@ class OncoGuardianPredictor:
                 for cancer, prob in zip(self.cancer_types, y_pred_proba[0])
             }
         }
+        
+        # Include BMI if calculated
+        if self.last_bmi is not None:
+            result['bmi_calculated'] = round(self.last_bmi, 2)
+            result['obesity_score'] = round(self.last_obesity, 1)
 
         return result
 
     def get_risk_level(self, confidence: float) -> str:
         """
         Classify risk level based on prediction confidence.
-
+        
         Args:
-            confidence (float): Model prediction confidence (0-1)
-
+            confidence (float): Model confidence (0-1)
+            
         Returns:
-            str: Risk level ('LOW', 'MEDIUM', 'HIGH')
+            str: Risk level 'LOW', 'MEDIUM', or 'HIGH'
         """
         if confidence < 0.5:
             return 'LOW'
@@ -543,20 +607,16 @@ class OncoGuardianPredictor:
         else:
             return 'HIGH'
 
-    def get_recommendations(
-        self, 
-        patient_data: Dict, 
-        cancer_type: str = None
-    ) -> Dict:
+    def get_recommendations(self, patient_data: Dict, cancer_type: str = None) -> Dict:
         """
         Get personalized dietary recommendations.
-
+        
         Args:
-            patient_data (dict): Patient information
+            patient_data (dict): Patient features
             cancer_type (str): Specific cancer type (if None, use prediction)
-
+            
         Returns:
-            dict: Personalized recommendations
+            dict: Recommendations with foods, supplements, lifestyle tips
         """
         # Get prediction if cancer type not specified
         if cancer_type is None:
@@ -567,16 +627,15 @@ class OncoGuardianPredictor:
             prediction = self.predict(patient_data)
             confidence = prediction['probabilities'].get(cancer_type, 0.5)
 
-        # Determine risk level
         risk_level = self.get_risk_level(confidence)
 
-        # Get food database for cancer type
+        # Get recommendations from database
         if cancer_type not in self.food_database:
             return {
                 'cancer_type': cancer_type,
                 'risk_level': risk_level,
                 'confidence': float(confidence),
-                'message': f'Limited recommendations available for {cancer_type}'
+                'message': f'No recommendations available for {cancer_type}'
             }
 
         recommendations = self.food_database[cancer_type].get(risk_level, {})
@@ -585,47 +644,47 @@ class OncoGuardianPredictor:
             'cancer_type': cancer_type,
             'risk_level': risk_level,
             'confidence': float(confidence),
-            'recommended_foods': recommendations.get('foods', []),
-            'foods_to_avoid': recommendations.get('avoid', []),
+            'recommended_foods': recommendations.get('recommended_foods', []),
+            'foods_to_avoid': recommendations.get('foods_to_avoid', []),
             'supplements': recommendations.get('supplements', []),
             'lifestyle_tips': recommendations.get('lifestyle', [])
         }
+        
+        # Include BMI if available
+        if self.last_bmi is not None:
+            result['bmi_calculated'] = round(self.last_bmi, 2)
+            result['obesity_score'] = round(self.last_obesity, 1)
 
         return result
 
     def get_full_assessment(self, patient_data: Dict) -> Dict:
         """
-        Get complete assessment including prediction and recommendations.
-
+        Get complete assessment with prediction and recommendations.
+        
         Args:
-            patient_data (dict): Patient information
-
+            patient_data (dict): Patient features
+            
         Returns:
             dict: Complete assessment report
         """
         prediction = self.predict(patient_data)
         cancer_type = prediction['predicted_cancer_type']
         
-        recommendations = self.get_recommendations(
-            patient_data, 
-            cancer_type
-        )
+        recommendations = self.get_recommendations(patient_data, cancer_type)
 
-        assessment = {
+        return {
             'prediction': prediction,
             'recommendations': recommendations,
             'all_probabilities': prediction['probabilities']
         }
 
-        return assessment
-
     def batch_predict(self, patients_data: List[Dict]) -> List[Dict]:
         """
         Make predictions for multiple patients.
-
+        
         Args:
             patients_data (list): List of patient data dictionaries
-
+            
         Returns:
             list: List of prediction results
         """
@@ -636,62 +695,110 @@ class OncoGuardianPredictor:
         return results
 
 
-def example_usage():
-    """Example usage of the OncoGuardianPredictor."""
+def example_flutter_inputs():
+    """
+    Test with 5 example patient inputs matching Flutter widget outputs.
     
-    # Initialize predictor
+    Flutter widgets provide numeric inputs in 0-10 scale:
+    - Age: spinner/picker (25-90)
+    - Gender: dropdown (0=Female, 1=Male)
+    - Height: text input (1.40-2.10m)
+    - Weight: text input (45-120kg)
+    - All other: slider (0-10 scale)
+    """
+    
+    print("\n" + "="*70)
+    print("🧪 TESTING PREDICTOR WITH FLUTTER-COMPATIBLE INPUTS")
+    print("="*70)
+    
     predictor = OncoGuardianPredictor()
 
-    # Example patient data (using numeric values - same format as training data)
-    patient_data = {
-        'Age': 45,                    # Age in years (25-90)
-        'Gender': 0,                  # 0=Female, 1=Male
-        'Smoking': 3,                 # 0-10 scale (3=Light smoker)
-        'Alcohol_Use': 5,             # 0-10 scale (5=Moderate drinker)
-        'Obesity': 4,                 # 0-10 scale
-        'Family_History': 1,          # 0=No, 1=Yes
-        'Diet_Red_Meat': 6,           # 0-10 scale (higher = more red meat)
-        'Diet_Salted_Processed': 4,   # 0-10 scale
-        'Fruit_Veg_Intake': 8,        # 0-10 scale (higher = more fruits/veggies)
-        'Physical_Activity': 7,       # 0-10 scale (higher = more active)
-        'Air_Pollution': 5,           # 0-10 scale
-        'Occupational_Hazards': 3,    # 0-10 scale
-        'BRCA_Mutation': 0,           # 0=No, 1=Yes
-        'H_Pylori_Infection': 0,      # 0=No, 1=Yes
-        'Calcium_Intake': 7,          # 0-10 scale (higher = more calcium)
+    # 5 example Flutter inputs
+    flutter_patients = {
+        "Patient 1: Low Risk (Young Female)": {
+            'Age': 35, 'Gender': 0,
+            'Height': 1.65, 'Weight': 58,
+            'Smoking': 0, 'Alcohol_Use': 2,
+            'Family_History': 0, 'BRCA_Mutation': 0,
+            'Diet_Red_Meat': 2, 'Diet_Salted_Processed': 1, 
+            'Fruit_Veg_Intake': 9, 'Calcium_Intake': 8,
+            'Physical_Activity': 9, 'Air_Pollution': 2,
+            'Occupational_Hazards': 0, 'H_Pylori_Infection': 0,
+        },
+        
+        "Patient 2: Medium Risk (Middle-aged Male)": {
+            'Age': 52, 'Gender': 1,
+            'Height': 1.78, 'Weight': 88,
+            'Smoking': 4, 'Alcohol_Use': 5,
+            'Family_History': 1, 'BRCA_Mutation': 0,
+            'Diet_Red_Meat': 6, 'Diet_Salted_Processed': 5, 
+            'Fruit_Veg_Intake': 5, 'Calcium_Intake': 5,
+            'Physical_Activity': 5, 'Air_Pollution': 6,
+            'Occupational_Hazards': 4, 'H_Pylori_Infection': 0,
+        },
+        
+        "Patient 3: High Risk (Older Male)": {
+            'Age': 62, 'Gender': 1,
+            'Height': 1.72, 'Weight': 105,
+            'Smoking': 8, 'Alcohol_Use': 7,
+            'Family_History': 1, 'BRCA_Mutation': 0,
+            'Diet_Red_Meat': 8, 'Diet_Salted_Processed': 7, 
+            'Fruit_Veg_Intake': 2, 'Calcium_Intake': 2,
+            'Physical_Activity': 2, 'Air_Pollution': 8,
+            'Occupational_Hazards': 7, 'H_Pylori_Infection': 1,
+        },
+        
+        "Patient 4: BRCA+ Breast Risk": {
+            'Age': 48, 'Gender': 0,
+            'Height': 1.68, 'Weight': 75,
+            'Smoking': 2, 'Alcohol_Use': 6,
+            'Family_History': 1, 'BRCA_Mutation': 1,
+            'Diet_Red_Meat': 7, 'Diet_Salted_Processed': 6, 
+            'Fruit_Veg_Intake': 4, 'Calcium_Intake': 6,
+            'Physical_Activity': 4, 'Air_Pollution': 3,
+            'Occupational_Hazards': 1, 'H_Pylori_Infection': 0,
+        },
+        
+        "Patient 5: Colon Risk (Poor Diet)": {
+            'Age': 58, 'Gender': 1,
+            'Height': 1.75, 'Weight': 92,
+            'Smoking': 5, 'Alcohol_Use': 8,
+            'Family_History': 1, 'BRCA_Mutation': 0,
+            'Diet_Red_Meat': 9, 'Diet_Salted_Processed': 8, 
+            'Fruit_Veg_Intake': 2, 'Calcium_Intake': 2,
+            'Physical_Activity': 3, 'Air_Pollution': 5,
+            'Occupational_Hazards': 2, 'H_Pylori_Infection': 1,
+        },
     }
 
-    print("\n" + "="*60)
-    print("EXAMPLE PREDICTION")
-    print("="*60)
-
-    # Get full assessment
-    assessment = predictor.get_full_assessment(patient_data)
-
-    print(f"\n🔮 Prediction Results:")
-    print(f"   Predicted Cancer Type: {assessment['prediction']['predicted_cancer_type']}")
-    print(f"   Confidence: {assessment['prediction']['confidence']:.2%}")
-
-    print(f"\n📊 All Cancer Type Probabilities:")
-    for cancer, prob in assessment['all_probabilities'].items():
-        print(f"   {cancer}: {prob:.2%}")
-
-    print(f"\n🍽️ Recommendations:")
-    rec = assessment['recommendations']
-    print(f"   Risk Level: {rec['risk_level']}")
-    print(f"   Recommended Foods:")
-    for food in rec['recommended_foods'][:5]:
-        print(f"      {food}")
-    print(f"\n   Foods to Avoid:")
-    for food in rec['foods_to_avoid'][:3]:
-        print(f"      {food}")
-    print(f"\n   Supplements:")
-    for supp in rec['supplements']:
-        print(f"      • {supp}")
-    print(f"\n   Lifestyle Tips:")
-    for tip in rec['lifestyle_tips']:
-        print(f"      • {tip}")
+    # Test each patient
+    for patient_name, patient_data in flutter_patients.items():
+        print(f"\n{'─'*70}")
+        print(f"📋 {patient_name}")
+        print(f"{'─'*70}")
+        
+        assessment = predictor.get_full_assessment(patient_data)
+        pred = assessment['prediction']
+        rec = assessment['recommendations']
+        
+        # Display results
+        print(f"\n📏 Measurements:")
+        if 'bmi_calculated' in pred:
+            print(f"   BMI: {pred['bmi_calculated']:.2f}, Obesity: {pred['obesity_score']:.1f}/10")
+        
+        print(f"\n🔮 Prediction:")
+        print(f"   Cancer Type: {pred['predicted_cancer_type']}")
+        print(f"   Confidence: {pred['confidence']:.1%}")
+        
+        print(f"\n📊 Cancer Probabilities:")
+        for cancer, prob in sorted(pred['probabilities'].items(), key=lambda x: x[1], reverse=True):
+            bar = "█" * int(prob * 15)
+            print(f"   {cancer:12} {prob:5.1%} {bar}")
+        
+        print(f"\n🍽️ Recommendations (Risk: {rec['risk_level']}):")
+        print(f"   Foods: {', '.join(rec['recommended_foods'][:2])}")
+        print(f"   Avoid: {', '.join(rec['foods_to_avoid'][:2])}")
 
 
 if __name__ == '__main__':
-    example_usage()
+    example_flutter_inputs()

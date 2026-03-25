@@ -31,6 +31,10 @@ class OncoGuardianPredictor:
     - Risk level classification (LOW, MEDIUM, HIGH)
     - Personalized dietary recommendations
     - Food suggestions and restrictions
+    - Feature engineering (10 derived features for accurate predictions)
+    
+    Note: The preprocess_input method automatically generates engineered features
+    that match the training pipeline (Feature Engineering)
     """
 
     def __init__(self, model_path='models/model.pkl', verbose=True):
@@ -419,6 +423,7 @@ class OncoGuardianPredictor:
     def preprocess_input(self, patient_data: Dict) -> np.ndarray:
         """
         Preprocess patient input data for prediction.
+        Includes feature engineering to match training pipeline.
 
         Args:
             patient_data (dict): Patient information with feature values
@@ -439,6 +444,42 @@ class OncoGuardianPredictor:
                     # Use label encoder
                     le = self.label_encoders[col]
                     df[col] = le.transform(df[col].astype(str))
+
+        # ===== FEATURE ENGINEERING =====
+        # Create engineered features to match training pipeline
+        try:
+            # 1. Lifestyle Risk Score
+            df['Lifestyle_Risk'] = (df['Smoking'] + df['Alcohol_Use'] + df['Obesity']) / 3
+            
+            # 2. Diet Quality Score
+            df['Diet_Quality'] = (df['Fruit_Veg_Intake'] * 2 - df['Diet_Red_Meat'] - df['Diet_Salted_Processed']) / 4
+            
+            # 3. Environmental Risk Score
+            df['Environmental_Risk'] = (df['Air_Pollution'] + df['Occupational_Hazards']) / 2
+            
+            # 4. Genetic Risk Score
+            df['Genetic_Risk'] = df['Family_History'] + df['BRCA_Mutation']
+            
+            # 5. Activity-Obesity Ratio
+            df['Activity_Obesity_Ratio'] = df['Physical_Activity'] / (df['Obesity'] + 1)
+            
+            # 6. Infection-Age Risk
+            df['Infection_Age_Risk'] = df['H_Pylori_Infection'] * (df['Age'] / 50)
+            
+            # 7. Calcium-Diet Protection
+            df['Calcium_Diet_Protection'] = df['Calcium_Intake'] * df['Diet_Quality']
+            
+            # 8. Age-Smoking Risk
+            df['Age_Smoking_Risk'] = df['Age'] * df['Smoking'] / 10
+            
+            # 9. Gender-Genetic Risk
+            df['Gender_Genetic_Risk'] = df['Gender'] * df['BRCA_Mutation']
+            
+            # 10. Protective Factors Score
+            df['Protective_Factors'] = (df['Physical_Activity'] + df['Diet_Quality'] + df['Calcium_Intake']) / 3
+            
+        except KeyError as e:
+            print(f"⚠️ Warning: Could not create engineered feature {e}. This may cause prediction errors.")
 
         # Ensure all features are present
         for feature in self.feature_names:
@@ -601,23 +642,23 @@ def example_usage():
     # Initialize predictor
     predictor = OncoGuardianPredictor()
 
-    # Example patient data
+    # Example patient data (using numeric values - same format as training data)
     patient_data = {
-        'Age': 45,
-        'Gender': 'Female',
-        'Smoking': 'Never',
-        'Alcohol_Use': 'Moderate',
-        'Obesity': 'No',
-        'Family_History': 'Yes',
-        'Diet_Red_Meat': 'Low',
-        'Diet_Salted_Processed': 'Low',
-        'Fruit_Veg_Intake': 'High',
-        'Physical_Activity': 'High',
-        'Air_Pollution': 'Low',
-        'Occupational_Hazards': 'Low',
-        'BRCA_Mutation': 'No',
-        'H_Pylori_Infection': 'No',
-        'Calcium_Intake': 'High',
+        'Age': 45,                    # Age in years (25-90)
+        'Gender': 0,                  # 0=Female, 1=Male
+        'Smoking': 3,                 # 0-10 scale (3=Light smoker)
+        'Alcohol_Use': 5,             # 0-10 scale (5=Moderate drinker)
+        'Obesity': 4,                 # 0-10 scale
+        'Family_History': 1,          # 0=No, 1=Yes
+        'Diet_Red_Meat': 6,           # 0-10 scale (higher = more red meat)
+        'Diet_Salted_Processed': 4,   # 0-10 scale
+        'Fruit_Veg_Intake': 8,        # 0-10 scale (higher = more fruits/veggies)
+        'Physical_Activity': 7,       # 0-10 scale (higher = more active)
+        'Air_Pollution': 5,           # 0-10 scale
+        'Occupational_Hazards': 3,    # 0-10 scale
+        'BRCA_Mutation': 0,           # 0=No, 1=Yes
+        'H_Pylori_Infection': 0,      # 0=No, 1=Yes
+        'Calcium_Intake': 7,          # 0-10 scale (higher = more calcium)
     }
 
     print("\n" + "="*60)

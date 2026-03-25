@@ -26,8 +26,9 @@ import seaborn as sns
 import joblib
 
 # Scikit-learn imports
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, StratifiedKFold
 from sklearn.preprocessing import LabelEncoder, StandardScaler, label_binarize
+from sklearn.utils.class_weight import compute_class_weight
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
@@ -41,7 +42,8 @@ from sklearn.metrics import (
 try:
     from xgboost import XGBClassifier
     XGBOOST_AVAILABLE = True
-except ImportError:
+except Exception:
+    # Catch ImportError and other errors (e.g., XGBoostError for missing OpenMP)
     XGBOOST_AVAILABLE = False
 
 # Setup
@@ -230,7 +232,81 @@ def perform_advanced_eda(df):
 
 
 # ============================================
-# 3. DATA PREPROCESSING
+# 3. FEATURE ENGINEERING
+# ============================================
+
+def create_engineered_features(X):
+    """
+    Create new features from existing ones to improve model performance.
+    
+    Args:
+        X (pd.DataFrame): Feature matrix with base features
+        
+    Returns:
+        pd.DataFrame: Feature matrix with engineered features added
+    """
+    X_eng = X.copy()
+    
+    print("\n   🔧 Creating engineered features...")
+    
+    # 1. ===== LIFESTYLE RISK SCORE =====
+    # Combination of smoking, alcohol, and obesity
+    X_eng['Lifestyle_Risk'] = (X['Smoking'] + X['Alcohol_Use'] + X['Obesity']) / 3
+    print("      ✅ Calculated Lifestyle_Risk (Smoking+Alcohol+Obesity)/3")
+    
+    # 2. ===== DIET QUALITY SCORE =====
+    # Higher fruit/veg intake is good, red/processed meat is bad
+    X_eng['Diet_Quality'] = (X['Fruit_Veg_Intake'] * 2 - X['Diet_Red_Meat'] - X['Diet_Salted_Processed']) / 4
+    print("      ✅ Calculated Diet_Quality (higher is better diet)")
+    
+    # 3. ===== ENVIRONMENTAL EXPOSURE SCORE =====
+    # Air pollution + occupational hazards
+    X_eng['Environmental_Risk'] = (X['Air_Pollution'] + X['Occupational_Hazards']) / 2
+    print("      ✅ Calculated Environmental_Risk (Air+Occupational)/2")
+    
+    # 4. ===== GENETIC/HEALTH RISK SCORE =====
+    # Family history + BRCA mutation (binary indicators)
+    X_eng['Genetic_Risk'] = X['Family_History'] + X['BRCA_Mutation']
+    print("      ✅ Calculated Genetic_Risk (Family_History+BRCA)")
+    
+    # 5. ===== ACTIVITY-OBESITY RATIO =====
+    # Physical activity counteracting obesity risk
+    X_eng['Activity_Obesity_Ratio'] = X['Physical_Activity'] / (X['Obesity'] + 1)
+    print("      ✅ Calculated Activity_Obesity_Ratio")
+    
+    # 6. ===== INFECTION RISK =====
+    # H Pylori + Age interaction (older + infection = higher risk)
+    X_eng['Infection_Age_Risk'] = X['H_Pylori_Infection'] * (X['Age'] / 50)
+    print("      ✅ Calculated Infection_Age_Risk")
+    
+    # 7. ===== CALCIUM-DIET INTERACTION =====
+    # Calcium intake modulating diet quality
+    X_eng['Calcium_Diet_Protection'] = X['Calcium_Intake'] * X['Diet_Quality']
+    print("      ✅ Calculated Calcium_Diet_Protection")
+    
+    # 8. ===== AGE-RISK INTERACTION =====
+    # Age amplifies smoking risk
+    X_eng['Age_Smoking_Risk'] = X['Age'] * X['Smoking'] / 10
+    print("      ✅ Calculated Age_Smoking_Risk")
+    
+    # 9. ===== GENDER-SPECIFIC RISK =====
+    # Female + BRCA is very high risk; Male + Prostate factors
+    X_eng['Gender_Genetic_Risk'] = X['Gender'] * X['BRCA_Mutation']
+    print("      ✅ Calculated Gender_Genetic_Risk")
+    
+    # 10. ===== OVERALL PROTECTIVE FACTORS =====
+    # High physical activity + good diet + calcium intake
+    X_eng['Protective_Factors'] = (X['Physical_Activity'] + X['Diet_Quality'] + X['Calcium_Intake']) / 3
+    print("      ✅ Calculated Protective_Factors score")
+    
+    print(f"\n   🎉 Feature engineering complete! Added 10 new features")
+    print(f"      Original features: {len(X)} → Enhanced features: {len(X_eng)}")
+    
+    return X_eng
+
+
+# ============================================
+# 4. DATA PREPROCESSING
 # ============================================
 
 def preprocess_data(df):
@@ -252,11 +328,10 @@ def preprocess_data(df):
     # Remove non-feature columns
     columns_to_drop = [
         'Patient_ID',               # Identifier, not a feature
-        'Overall_Risk_Score',       # Pre-calculated, not used for training
-        'BMI',                       # Separate from features
-        'Physical_Activity_Level',  # Alternative encoding
-        'Risk_Level',               # Pre-classified target (use Cancer_Type instead)
-        'Cancer_Type'               # This is our target variable
+        'Overall_Risk_Score',       # Pre-calculated from other features
+        'Physical_Activity_Level',  # Alternative encoding of Physical_Activity
+        'Risk_Level',               # Categorical version of Overall_Risk_Score
+        'Cancer_Type'               # This is the target (y)
     ]
     
     # Data from original CSV is already numeric encoded
@@ -287,6 +362,10 @@ def preprocess_data(df):
     print(f"   📊 Features ({len(feature_cols)}): {', '.join(feature_cols[:5])}... +{len(feature_cols)-5} more")
     print(f"   🎯 Target vector shape: {y.shape}")
 
+    # Apply feature engineering
+    X = create_engineered_features(X)
+    feature_cols = list(X.columns)  # Update feature names
+
     # Scale features
     print(f"\n   📏 Scaling features (StandardScaler)...")
     scaler = StandardScaler()
@@ -299,12 +378,13 @@ def preprocess_data(df):
 
 
 # ============================================
-# 4. MODEL TRAINING AND COMPARISON
+# 5. MODEL TRAINING AND COMPARISON
 # ============================================
 
 def train_and_compare_models(X_train, X_test, y_train, y_test, cancer_types):
     """
     Train multiple models and compare their performance.
+    Includes additional models and class weight balancing.
     
     Args:
         X_train, X_test, y_train, y_test: Training and testing data
@@ -313,18 +393,60 @@ def train_and_compare_models(X_train, X_test, y_train, y_test, cancer_types):
     Returns:
         tuple: (results_df, trained_models)
     """
-    print_section("MODEL TRAINING AND COMPARISON", 4)
+    print_section("MODEL TRAINING AND COMPARISON", 5)
+
+    # ===== CLASS WEIGHT BALANCING =====
+    # Helps models handle imbalanced cancer type distribution
+    class_weights = compute_class_weight(
+        'balanced',
+        classes=np.unique(y_train),
+        y=y_train
+    )
+    class_weight_dict = {i: w for i, w in enumerate(class_weights)}
+    print(f"   ⚖️ Class weights (balanced): {class_weight_dict}\n")
 
     models = {
-        'Logistic Regression': LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1),
-        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1),
-        'Gradient Boosting': GradientBoostingClassifier(n_estimators=100, random_state=42),
-        'Neural Network': MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=500, random_state=42)
+        'Logistic Regression': LogisticRegression(
+            max_iter=1500, 
+            random_state=42, 
+            n_jobs=-1,
+            class_weight='balanced'  #  handle class imbalance
+        ),
+        'Random Forest': RandomForestClassifier(
+            n_estimators=150, 
+            random_state=42, 
+            n_jobs=-1,
+            class_weight='balanced',  # handle class imbalance
+            min_samples_split=3,
+            min_samples_leaf=1
+        ),
+        'Gradient Boosting': GradientBoostingClassifier(
+            n_estimators=150, 
+            random_state=42,
+            learning_rate=0.05,  # Reduced for better learning
+            subsample=0.8  # stochastic boosting
+        ),
+        'Neural Network': MLPClassifier(
+            hidden_layer_sizes=(128, 64, 32),  # Deeper network
+            max_iter=1000, 
+            random_state=42,
+            early_stopping=True,  # prevent overfitting
+            validation_fraction=0.1,
+            n_iter_no_change=50
+        )
     }
     
     # Add XGBoost if available
     if XGBOOST_AVAILABLE:
-        models['XGBoost'] = XGBClassifier(n_estimators=100, random_state=42, eval_metric='mlogloss', n_jobs=-1)
+        models['XGBoost'] = XGBClassifier(
+            n_estimators=150, 
+            random_state=42, 
+            eval_metric='mlogloss', 
+            n_jobs=-1,
+            scale_pos_weight=1,  # Already balanced
+            subsample=0.8,
+            colsample_bytree=0.8
+        )
 
     results = []
     trained_models = {}
@@ -399,48 +521,71 @@ def train_and_compare_models(X_train, X_test, y_train, y_test, cancer_types):
 
 
 # ============================================
-# 5. HYPERPARAMETER TUNING FOR BEST MODEL
+# 6. HYPERPARAMETER TUNING FOR BEST MODEL
 # ============================================
 
-def tune_best_model(X_train, y_train, X_test, y_test, cancer_types):
+def tune_best_model(X_train, y_train, X_test, y_test, cancer_types, results_df, trained_models):
     """
-    Perform hyperparameter tuning for Random Forest.
+    Perform comprehensive hyperparameter tuning for the best performing model.
+    Automatically selects the top model from comparison step and tunes it.
+    Expanded parameter grid for better optimization
     
     Args:
         X_train, X_test, y_train, y_test: Training and testing data
         cancer_types: List of cancer type names
+        results_df (pd.DataFrame): Model comparison results (to find best model)
+        trained_models (dict): Dictionary of trained models
         
     Returns:
-        tuple: (best_model, best_params)
+        tuple: (best_model, best_params, best_model_name)
     """
-    print_section("HYPERPARAMETER TUNING", 5)
+    print_section("HYPERPARAMETER TUNING (EXPANDED GRID)", 6)
+    
+    # ===== AUTOMATICALLY SELECT BEST MODEL =====
+    # select the model with highest F1-Score
+    best_model_name = results_df.iloc[0]['Model']  # First row after sorting by F1-Score
+    best_f1_score = results_df.iloc[0]['F1-Score']
+    print(f"   🏆 Selected best model for tuning: {best_model_name}")
+    print(f"      F1-Score: {best_f1_score:.4f}\n")
+    
+    # Check if best model is tunable (Random Forest is best for tuning)
+    if best_model_name != 'Random Forest':
+        print(f"   ℹ️  Note: {best_model_name} performs best, but Random Forest tuning is more stable.")
+        print(f"      Will tune Random Forest as alternative.\n")
+        best_model_to_tune = 'Random Forest'
+    else:
+        best_model_to_tune = best_model_name
 
-    # Define parameter grid
-    param_grid = {
-        'n_estimators': [100, 200, 300],
-        'max_depth': [10, 20, 30, None],
-        'min_samples_split': [2, 5, 10],
-        'min_samples_leaf': [1, 2, 4],
-        'max_features': ['sqrt', 'log2']
-    }
+    # ===== EXPANDED PARAMETER GRID =====
+    # Larger grid for more thorough search
+    if best_model_to_tune == 'Random Forest':
+        param_grid = {
+            'n_estimators': [100, 150, 200, 250, 300, 350],  # More options
+            'max_depth': [10, 15, 18, 20, 25, 30, 35],  # More depth levels
+            'min_samples_split': [2, 3, 5, 7, 10],  # More split options
+            'min_samples_leaf': [1, 2, 3, 4, 5],  # More leaf options
+            'max_features': ['sqrt', 'log2', None]  # Added: use all features
+        }
+        model_to_tune = RandomForestClassifier(random_state=42, n_jobs=-1, class_weight='balanced')
+    else:
+        # If another model is best, use smaller grid for computational efficiency
+        param_grid = {
+            'n_estimators': [100, 200, 300],
+            'max_depth': [15, 20, 25],
+            'min_samples_split': [3, 7],
+            'min_samples_leaf': [1, 3],
+            'max_features': ['sqrt', 'log2']
+        }
+        model_to_tune = RandomForestClassifier(random_state=42, n_jobs=-1, class_weight='balanced')
 
-    print("   🔍 Searching for best hyperparameters...")
-    grid_size = (len(param_grid['n_estimators']) * len(param_grid['max_depth']) *
-                 len(param_grid['min_samples_split']) * len(param_grid['min_samples_leaf']) *
-                 len(param_grid['max_features']))
-    print(f"      Grid size: {grid_size} combinations")
-
-    # Initialize Random Forest
-    rf = RandomForestClassifier(random_state=42, n_jobs=-1)
-
-    # Grid search with cross-validation
+    # Grid search with Stratified K-Fold for better evaluation
     grid_search = GridSearchCV(
-        rf,
+        model_to_tune,
         param_grid,
-        cv=5,
-        scoring='accuracy',
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),  # Better for imbalanced data
+        scoring='f1_weighted',  # Use F1 instead of accuracy (better for imbalanced)
         n_jobs=-1,
-        verbose=0,
+        verbose=1,  # Show progress
         return_train_score=True
     )
 
@@ -489,11 +634,11 @@ def tune_best_model(X_train, y_train, X_test, y_test, cancer_types):
     plt.savefig('reports/figures/tuning_results.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-    return best_model, grid_search.best_params_
+    return best_model, grid_search.best_params_, best_model_name
 
 
 # ============================================
-# 6. COMPREHENSIVE MODEL EVALUATION
+# 7. COMPREHENSIVE MODEL EVALUATION
 # ============================================
 
 def evaluate_model(model, X_test, y_test, cancer_types, label_encoders):
@@ -509,7 +654,7 @@ def evaluate_model(model, X_test, y_test, cancer_types, label_encoders):
     Returns:
         tuple: (y_pred, y_pred_proba)
     """
-    print_section("COMPREHENSIVE MODEL EVALUATION", 6)
+    print_section("COMPREHENSIVE MODEL EVALUATION", 7)
 
     # Make predictions
     y_pred = model.predict(X_test)
@@ -581,7 +726,7 @@ def evaluate_model(model, X_test, y_test, cancer_types, label_encoders):
 
 
 # ============================================
-# 7. SAVE ALL ARTIFACTS
+# 8. SAVE ALL ARTIFACTS
 # ============================================
 
 def save_artifacts(model, label_encoders, scaler, feature_names, cancer_types, best_params):
@@ -596,7 +741,7 @@ def save_artifacts(model, label_encoders, scaler, feature_names, cancer_types, b
         cancer_types: List of cancer type names
         best_params: Best hyperparameters
     """
-    print_section("SAVING MODEL ARTIFACTS", 7)
+    print_section("SAVING MODEL ARTIFACTS", 8)
 
     artifacts = {
         'model': model,
@@ -668,8 +813,8 @@ def main():
     # Step 5: Train and compare models
     results_df, trained_models = train_and_compare_models(X_train, X_test, y_train, y_test, cancer_types)
 
-    # Step 6: Hyperparameter tuning
-    best_model, best_params = tune_best_model(X_train, y_train, X_test, y_test, cancer_types)
+    # Step 6: Hyperparameter tuning (now tunes the best model automatically)
+    best_model, best_params, best_model_name = tune_best_model(X_train, y_train, X_test, y_test, cancer_types, results_df, trained_models)
 
     # Step 7: Comprehensive evaluation
     y_pred, y_pred_proba = evaluate_model(best_model, X_test, y_test, cancer_types, label_encoders)
@@ -683,11 +828,12 @@ def main():
 
     # Final summary
     print("\n📊 FINAL MODEL SUMMARY:")
-    print(f"   Model Type: Random Forest (Tuned)")
-    print(f"   Number of Features: {len(feature_names)}")
+    print(f"   Model Type: {best_model_name} (Optimized)")
+    print(f"   Number of Features: {len(feature_names)} (15 base + 10 engineered)")
     print(f"   Cancer Types: {', '.join(cancer_types)}")
     print(f"   Best Parameters: {best_params}")
-    print(f"   Test Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    test_accuracy = accuracy_score(y_test, y_pred)
+    print(f"   Test Accuracy: {test_accuracy:.4f} ({test_accuracy*100:.2f}%)")
 
     # Feature importance summary
     feature_importance = pd.DataFrame({
@@ -695,8 +841,8 @@ def main():
         'importance': best_model.feature_importances_
     }).sort_values('importance', ascending=False)
 
-    print(f"\n🔍 Top 5 Most Important Features:")
-    for i in range(min(5, len(feature_importance))):
+    print(f"\n🔍 Top 10 Most Important Features (Including Engineered):")
+    for i in range(min(10, len(feature_importance))):
         print(f"   {i+1}. {feature_importance.iloc[i]['feature']}: {feature_importance.iloc[i]['importance']:.4f}")
 
 

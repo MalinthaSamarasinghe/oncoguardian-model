@@ -395,11 +395,11 @@ predictor = OncoGuardianPredictor()
 
 # Prepare patient data
 patient = {
-    'Age': 45,
-    'Gender': 'Female',
-    'Smoking': 'Never',
-    'Alcohol_Use': 'Moderate',
-    'Obesity': 'No',
+    'Age': 45,                    # Age in years (25-90)
+    'Gender': 0,                  # 0=Female, 1=Male
+    'Smoking': 3,                 # 0-10 scale (3=Light smoker)
+    'Alcohol_Use': 5,             # 0-10 scale (5=Moderate drinker)
+    'Obesity': 4,                 # 0-10 scale
     ...
 }
 

@@ -28,7 +28,7 @@ from datetime import datetime
 
 # Scikit-learn imports
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, GridSearchCV
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, StandardScaler, label_binarize
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -36,11 +36,13 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     classification_report, confusion_matrix, roc_auc_score,
-    roc_curve, auc, ConfusionMatrixDisplay, label_binarize
+    roc_curve, auc, ConfusionMatrixDisplay
 )
 
-# XGBoost import
-from xgboost import XGBClassifier
+# XGBoost import (optional - requires OpenMP on macOS)
+# To use XGBoost on macOS, run: brew install libomp
+# from xgboost import XGBClassifier
+XGBOOST_AVAILABLE = False
 
 # Setup
 warnings.filterwarnings('ignore')
@@ -247,37 +249,46 @@ def preprocess_data(df):
     df_numeric = df.copy()
     label_encoders = {}
 
-    # Identify categorical columns (excluding target)
-    categorical_cols = df_numeric.select_dtypes(include=['object']).columns.tolist()
-    categorical_cols = [col for col in categorical_cols if col != 'Cancer_Type']
+    # Remove non-feature columns
+    columns_to_drop = [
+        'Patient_ID',               # Identifier, not a feature
+        'Overall_Risk_Score',       # Pre-calculated, not used for training
+        'BMI',                       # Separate from features
+        'Physical_Activity_Level',  # Alternative encoding
+        'Risk_Level',               # Pre-classified target (use Cancer_Type instead)
+        'Cancer_Type'               # This is our target variable
+    ]
+    
+    # Data from original CSV is already numeric encoded
+    # No need for LabelEncoder conversion
+    print(f"   📝 Data is already numerically encoded (from original dataset)")
+    print(f"   ✅ Removed non-feature columns: {', '.join(columns_to_drop)}")
 
-    print(f"   📝 Categorical columns to encode: {categorical_cols}")
-
-    # Encode categorical features
-    for col in categorical_cols:
-        le = LabelEncoder()
-        df_numeric[col] = le.fit_transform(df_numeric[col].astype(str))
-        label_encoders[col] = le
-        print(f"   ✅ Encoded '{col}': {len(le.classes_)} unique values")
-
-    # Encode target variable
+    # Encode target variable (Cancer_Type)
     target_encoder = LabelEncoder()
     df_numeric['Cancer_Type_Encoded'] = target_encoder.fit_transform(df_numeric['Cancer_Type'])
     label_encoders['Cancer_Type'] = target_encoder
 
     cancer_types = target_encoder.classes_.tolist()
     print(f"\n   🎯 Target classes: {cancer_types}")
+    print(f"   🎯 Number of samples per cancer type:")
+    for cancer_type in cancer_types:
+        count = (df_numeric['Cancer_Type'] == cancer_type).sum()
+        print(f"      {cancer_type}: {count} samples")
 
     # Create feature matrix and target vector
-    feature_cols = [col for col in df_numeric.columns if col not in ['Cancer_Type', 'Cancer_Type_Encoded']]
+    feature_cols = [col for col in df_numeric.columns 
+                   if col not in ['Cancer_Type', 'Cancer_Type_Encoded'] + columns_to_drop]
+    
     X = df_numeric[feature_cols]
     y = df_numeric['Cancer_Type_Encoded']
 
     print(f"\n   📊 Feature matrix shape: {X.shape}")
+    print(f"   📊 Features ({len(feature_cols)}): {', '.join(feature_cols[:5])}... +{len(feature_cols)-5} more")
     print(f"   🎯 Target vector shape: {y.shape}")
 
     # Scale features
-    print(f"\n   📏 Scaling features...")
+    print(f"\n   📏 Scaling features (StandardScaler)...")
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     X_scaled = pd.DataFrame(X_scaled, columns=X.columns)
@@ -308,9 +319,12 @@ def train_and_compare_models(X_train, X_test, y_train, y_test, cancer_types):
         'Logistic Regression': LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1),
         'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1),
         'Gradient Boosting': GradientBoostingClassifier(n_estimators=100, random_state=42),
-        'XGBoost': XGBClassifier(n_estimators=100, random_state=42, eval_metric='mlogloss', n_jobs=-1),
         'Neural Network': MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=500, random_state=42)
     }
+    
+    # Add XGBoost if available
+    if XGBOOST_AVAILABLE:
+        models['XGBoost'] = XGBClassifier(n_estimators=100, random_state=42, eval_metric='mlogloss', n_jobs=-1)
 
     results = []
     trained_models = {}
@@ -631,9 +645,10 @@ def main():
     create_output_directories()
 
     # Step 1: Load data
-    df = load_and_explore_data('data/cancer-risk-factors.csv')
+    # Use original data file (2000 real samples with proper encoding)
+    df = load_and_explore_data('data/cancer-risk-factors-original.csv')
     if df is None:
-        print("\n❌ Cannot proceed without data. Please add cancer-risk-factors.csv to data/ folder")
+        print("\n❌ Cannot proceed without data. Please add cancer-risk-factors-original.csv to data/ folder")
         return
 
     # Step 2: Perform EDA

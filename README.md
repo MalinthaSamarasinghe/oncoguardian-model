@@ -33,13 +33,15 @@ oncoguardian-model/
    pip install -r requirements.txt
    ```
 
-2. **Download dataset:**
-   - Place `cancer-risk-factors.csv` in the `data/` directory
+2. **Your dataset is ready!**
+   - ✅ `data/cancer-risk-factors-original.csv` - 2000 real samples (USE THIS!)
+   - ℹ️ `data/cancer-risk-factors.csv` - 500 sample records (for testing only)
 
 3. **Run training pipeline:**
    ```bash
    python src/training.py
    ```
+   This will train using your **real data** with 2000 actual cancer risk factor samples.
 
 ## Features
 

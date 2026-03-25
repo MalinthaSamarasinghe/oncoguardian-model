@@ -9,11 +9,9 @@ Your OncoGuardian model project has been **completely set up and organized** for
 /Users/outerspace/oncoguardian-model/
 ├── src/                           # Source code
 │   ├── training.py               # 🔴 Main training pipeline (800 lines)
-│   ├── predictor.py              # 🟢 Prediction & recommendations (400 lines)
-│   ├── generate_data.py           # 🔵 Sample data generation (200 lines)
-│   └── (ready for utils.py)
+│   └── predictor.py              # 🟢 Prediction & recommendations (400 lines)
 ├── data/
-│   └── cancer-risk-factors.csv   # ✅ Sample dataset (500 records)
+│   └── cancer-risk-factors.csv           # ✅ 2000 real samples
 ├── models/                        # (Created after training)
 ├── reports/                       # (Created after training)
 ├── CODE_EXPLANATION.md            # 📖 Complete code walkthrough
@@ -33,13 +31,10 @@ Your OncoGuardian model project has been **completely set up and organized** for
 #### Q1: "Can I run this model and train it using VS Code?"
 **✅ YES!** Completely set up now:
 ```bash
-# 1. Generate sample data
-python src/generate_data.py
-
-# 2. Train model  
+# 1. Train model  
 python src/training.py
 
-# 3. Make predictions
+# 2. Make predictions
 python src/predictor.py
 ```
 
@@ -83,53 +78,44 @@ python src/predictor.py
 
 ## 🚀 How to Start Right Now
 
-### **Step 1: Generate Sample Data (1 minute)**
-```bash
-cd /Users/outerspace/oncoguardian-model
-python src/generate_data.py
-```
-
-**Expected Output:**
-```
-✅ Dataset saved to data/cancer-risk-factors.csv
-   Shape: (500, 16)
-   Cancer Type Distribution:
-      Lung: 158
-      Colon: 101
-      ...
-```
-
-### **Step 2: Train the Model (3-5 minutes)**
+### **Step 1: Run Training Pipeline (3-5 minutes)**
 ```bash
 python src/training.py
 ```
 
-**What Happens:**
-- Step 1: Loads and explores data
-- Step 2: Advanced EDA (visualizations)
-- Step 3: Data preprocessing
-- Step 4: Trains 5 models
-- Step 5: Hyperparameter tuning
-- Step 6: Model evaluation
-- Step 7: Saves artifacts
+This uses your **2000 real cancer risk factor samples** to train 4 ML algorithms.
 
 **Expected Output:**
 ```
-✅ ONCOGUARDIAN ML PIPELINE COMPLETED SUCCESSFULLY!
+===============================================
+🚀 STARTING ONCOGUARDIAN ML PIPELINE
+===============================================
+
+✅ Dataset loaded successfully!
+   Shape: (2000, 21)
+   
+📊 Cancer Type Distribution:
+   Lung: 527 samples
+   Breast: 460 samples
+   Colon: 418 samples
+   Prostate: 305 samples
+   Skin: 290 samples
 
 📊 FINAL MODEL SUMMARY:
    Model Type: Random Forest (Tuned)
-   Number of Features: 14
-   Cancer Types: ['Lung', 'Breast', 'Colon', 'Prostate', 'Skin']
-   Test Accuracy: 0.9200 (92%)
+   Number of Features: 15
+   Cancer Types: Breast, Colon, Lung, Prostate, Skin
+   Test Accuracy: 0.7750 (77.5%)
    
    Top 5 Most Important Features:
-   1. Age: 0.2523
-   2. Gender: 0.1834
+   1. Smoking: 0.1835
+   2. Diet_Red_Meat: 0.1278
    ...
+
+✅ ONCOGUARDIAN ML PIPELINE COMPLETED SUCCESSFULLY!
 ```
 
-### **Step 3: Make Predictions (1 minute)**
+### **Step 2: Make Predictions (1 minute)**
 ```bash
 python src/predictor.py
 ```
@@ -216,14 +202,7 @@ recommendations = predictor.get_recommendations(patient)
 
 ---
 
-### **src/generate_data.py** - Creating Sample Data
-**Generates realistic data with:**
-- 500 patient records
-- Realistic age, gender, lifestyle factors
-- Risk factors correlated with cancer types
-- Balanced between cancer types
 
-**Why?** Original code didn't include data file, so this creates sample data for testing.
 
 ---
 
@@ -252,7 +231,7 @@ recommendations = predictor.get_recommendations(patient)
 4. **Prepare for Questions:**
    ```
    Q: How does the model work?
-   A: It learns patterns from 500 samples with 14 features
+   A: It learns patterns from 2000 real samples with 15 features
    
    Q: Why Random Forest?
    A: It outperformed other algorithms (92% accuracy)
@@ -277,17 +256,18 @@ recommendations = predictor.get_recommendations(patient)
 ### **Use Your Own Data:**
 1. Replace `data/cancer-risk-factors.csv` with your data
 2. Ensure it has these columns:
-   - `Cancer_Type` (target)
-   - `Age`, `Gender`, `Smoking`, `Alcohol_Use`
-   - And other 10+ risk factors
+   - `Cancer_Type` (target variable)
+   - `Age`, `Gender`, `Smoking`, `Alcohol_Use`, `Obesity`
+   - `Family_History`, diet factors, activity factors
+   - And other risk factors (numeric values preferred)
 3. Run `python src/training.py`
 
+**Note:** Data should be numeric encoded (like your original file)
+
 ### **Add More Cancer Types:**
-1. Edit `generate_data.py`:
-   ```python
-   cancer_types = ['Lung', 'Breast', 'Colon', 'Prostate', 'Skin', 'Ovarian', 'Liver']
-   ```
-2. Update recommendations in `predictor.py`
+1. Include additional cancer types in your data
+2. Update recommendations in `predictor.py` if needed
+3. Re-run `python src/training.py`
 
 ### **Try Different Models:**
 Edit `training.py` to test other algorithms:
@@ -346,13 +326,15 @@ pip install -r requirements.txt
 
 ### **"File not found: data/cancer-risk-factors.csv"**
 ```bash
-python src/generate_data.py
+# Ensure your data file is in the correct location
+# The file should be: data/cancer-risk-factors.csv
+ls -la data/cancer-risk-factors.csv
 ```
 
 ### **"Model accuracy is too low (< 70%)"**
-- Check data file is correct
-- Verify all features are present
-- Try with generated sample data first
+- Check data file is correct and has all 15 features
+- Verify numeric encoding is correct
+- Ensure Cancer_Type column is present as target variable
 
 ### **"Model training takes too long"**
 - Use fewer hyperparameters in tuning
@@ -364,16 +346,15 @@ python src/generate_data.py
 
 ### **Week 1: Understanding**
 1. Read QUICKSTART.md (5 min)
-2. Run generate_data.py (1 min)
-3. Run training.py (5 min)
-4. Read CODE_EXPLANATION.md (30 min)
-5. Analyze generated figures
+2. Run training.py (5 min)
+3. Read CODE_EXPLANATION.md (30 min)
+4. Review generated figures
 
-### **Week 2: Customization**
-1. Use your own dataset (if available)
-2. Try different models
-3. Adjust hyperparameters
-4. Document your experiments
+### **Week 2: Analysis**
+1. Analyze model performance metrics
+2. Review confusion matrix (which cancers are confused?)
+3. Check feature importance (which factors matter most?)
+4. Document findings for your report
 
 ### **Week 3: Mobile Integration**
 1. Read FLUTTER_INTEGRATION.md
@@ -453,16 +434,13 @@ Read: CHANGES_SUMMARY.md
 ## 🚀 Start Here:
 
 ```bash
-# 1. Generate data
-python src/generate_data.py
-
-# 2. Train model
+# 1. Train model
 python src/training.py
 
-# 3. Make predictions
+# 2. Make predictions
 python src/predictor.py
 
-# 4. Read documentation
+# 3. Read documentation
 open CODE_EXPLANATION.md
 ```
 

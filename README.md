@@ -34,14 +34,14 @@ oncoguardian-model/
    ```
 
 2. **Your dataset is ready!**
-   - ✅ `data/cancer-risk-factors-original.csv` - 2000 real samples (USE THIS!)
-   - ℹ️ `data/cancer-risk-factors.csv` - 500 sample records (for testing only)
+   - ✅ `data/cancer-risk-factors.csv` - Contains 2000 real cancer risk factor samples
+   - Ready to use immediately!
 
 3. **Run training pipeline:**
    ```bash
    python src/training.py
    ```
-   This will train using your **real data** with 2000 actual cancer risk factor samples.
+   This trains the model with your real data (2000 samples, 15 features, 5 cancer types).
 
 ## Features
 

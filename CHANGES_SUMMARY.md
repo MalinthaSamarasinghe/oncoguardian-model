@@ -24,9 +24,7 @@ oncoguardian_model.py (1 large file, 1000+ lines)
 ```
 src/
 ├── training.py        (800 lines - all training functions)
-├── predictor.py       (400 lines - prediction & recommendations)
-├── generate_data.py   (200 lines - data generation)
-└── (Optional) utils.py
+└── predictor.py       (400 lines - prediction & recommendations)
 ```
 
 **Benefits:**
@@ -346,37 +344,7 @@ def save_artifacts(model, label_encoders, scaler, feature_names, cancer_types, b
 
 ---
 
-### 9. **New: Data Generation Module**
-
-#### Brand New File: `generate_data.py`
-```python
-def generate_sample_dataset(n_samples=500, random_state=42):
-    """Generate realistic sample dataset"""
-    
-    # Creates:
-    # - Age, Gender, Smoking, Alcohol_Use, Obesity
-    # - Family_History, Diet factors, Activity level
-    # - Occupational hazards, Genetic factors
-    # - Target: Cancer_Type
-    
-    # With realistic correlations:
-    # - Smokers → Higher lung cancer probability
-    # - Women with BRCA mutation → Higher breast cancer
-    # - Age > 65 → Higher colon/prostate cancer
-
-def save_dataset(df, filepath):
-    """Save with verification"""
-```
-
-**Why Added:**
-- No external dataset provided in original
-- Allows testing without external data
-- Realistic correlations teach model properly
-- Easy to scale up with real data later
-
----
-
-### 10. **New: Predictor Module**
+### 9. **New: Predictor Module**
 
 #### Brand New File: `predictor.py`
 ```python

@@ -28,9 +28,7 @@
 oncoguardian-model/
 ├── src/
 │   ├── training.py           # Main training pipeline (7 steps)
-│   ├── predictor.py          # Prediction and recommendation system
-│   ├── generate_data.py      # Sample data generation
-│   └── utils.py              # (Optional) Utility functions
+│   └── predictor.py          # Prediction and recommendation system
 ├── data/
 │   └── cancer-risk-factors.csv    # Input dataset
 ├── models/                        # Trained model artifacts
@@ -439,48 +437,19 @@ print(recommendations)
 
 ---
 
-### 3. **generate_data.py** - Creating Sample Data
-
-Generates realistic sample data for training:
-
-```python
-from src.generate_data import generate_sample_dataset, save_dataset
-
-# Generate 500 samples
-df = generate_sample_dataset(n_samples=500)
-
-# Save to CSV
-save_dataset(df, 'data/cancer-risk-factors.csv')
-```
-
-**Generated Features:**
-- Age: 20-85 years
-- Gender: Male, Female, Other
-- Smoking: Never, Former, Current
-- Alcohol_Use: None, Moderate, Heavy
-- Obesity: No, Yes
-- Family_History: No, Yes
-- And 9 more risk factors...
-- **Target:** Cancer_Type (Lung, Breast, Colon, Prostate, Skin)
-
----
-
 ## 🚀 How to Run
 
-### **Option 1: Quick Start (Recommended for First Time)**
+### **Quick Start**
 
 ```bash
-# 1. Generate sample data
-python src/generate_data.py
-
-# 2. Run training pipeline
+# 1. Run training pipeline with your real data
 python src/training.py
 
-# 3. Make predictions
+# 2. Make predictions
 python src/predictor.py
 ```
 
-### **Option 2: With Your Own Data**
+### **With Your Own Data**
 
 ```bash
 # 1. Place your CSV in data/cancer-risk-factors.csv
@@ -504,9 +473,9 @@ python src/predictor.py
 
 ### **Data Split**
 ```
-Original Data (500 samples)
-├── Training Set (80%, 400 samples) → Used to train model
-└── Test Set (20%, 100 samples)     → Used to evaluate model
+Original Data (2000 samples)
+├── Training Set (80%, 1600 samples) → Used to train model
+└── Test Set (20%, 400 samples)     → Used to evaluate model
 
 Why?
 - Training on test data would overfit (memorize answers)
@@ -659,8 +628,8 @@ Off-diagonal = Misclassifications
 
 ### **Error: File not found**
 ```
-Solution: Generate sample data first
-python src/generate_data.py
+Solution: Ensure data/cancer-risk-factors.csv exists in your project
+Place your CSV file in the data/ directory
 ```
 
 ### **Error: Module not found**

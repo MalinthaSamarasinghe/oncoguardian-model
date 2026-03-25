@@ -645,10 +645,9 @@ def main():
     create_output_directories()
 
     # Step 1: Load data
-    # Use original data file (2000 real samples with proper encoding)
-    df = load_and_explore_data('data/cancer-risk-factors-original.csv')
+    df = load_and_explore_data('data/cancer-risk-factors.csv')
     if df is None:
-        print("\n❌ Cannot proceed without data. Please add cancer-risk-factors-original.csv to data/ folder")
+        print("\n❌ Cannot proceed without data. Please add cancer-risk-factors.csv to data/ folder")
         return
 
     # Step 2: Perform EDA
